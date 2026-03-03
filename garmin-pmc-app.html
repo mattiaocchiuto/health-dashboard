@@ -28,6 +28,30 @@
   --mono: 'DM Mono', monospace;
   --sans: 'Syne', sans-serif;
   --radius: 6px;
+  --sleep-deep:  #4361ee;
+  --sleep-light: #7b8cde;
+  --sleep-rem:   #9f86c0;
+}
+html[data-theme="light"] {
+  --bg:      #f0f2f7;
+  --s1:      #ffffff;
+  --s2:      #eaecf4;
+  --border:  #d1d5e0;
+  --border2: #b8bdd0;
+  --text:    #1a1d2e;
+  --text2:   #4a5068;
+  --text3:   #8890aa;
+  --accent:  #00b87a;
+  --accent2: #2271e0;
+  --atl:     #d6366e;
+  --ctl:     #2271e0;
+  --tsb:     #c49b00;
+  --orange:  #c95e1e;
+  --danger:  #d4294b;
+  --success: #00b87a;
+  --sleep-deep:  #2a3db0;
+  --sleep-light: #5a6bc0;
+  --sleep-rem:   #7a60a8;
 }
 html, body { height: 100%; }
 body {
@@ -865,6 +889,38 @@ body::before {
   .kpi-value { font-size: 36px; }
   .risk-factors { grid-template-columns: 1fr; }
 }
+
+/* ─── THEME TOGGLE BUTTON ─────────────────────────────── */
+.btn-theme {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: transparent;
+  color: var(--text2);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.btn-theme:hover { border-color: var(--accent); color: var(--accent); }
+.btn-theme .icon-sun  { display: block; }
+.btn-theme .icon-moon { display: none; }
+html[data-theme="light"] .btn-theme .icon-sun  { display: none; }
+html[data-theme="light"] .btn-theme .icon-moon { display: block; }
+
+/* ─── LIGHT THEME OVERRIDES ───────────────────────────── */
+html[data-theme="light"] .topbar {
+  background: rgba(240,242,247,0.92);
+}
+html[data-theme="light"] #chart-tooltip {
+  background: #ffffff;
+  color: var(--text);
+}
+html[data-theme="light"] body::before { opacity: 0.15; }
 </style>
 </head>
 <body>
@@ -925,6 +981,18 @@ body::before {
     </div>
     <div class="topbar-right">
       <div class="topbar-date" id="topbar-date">—</div>
+      <button class="btn-theme" id="theme-btn" onclick="toggleTheme()" title="Toggle light/dark theme">
+        <svg class="icon-sun" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg class="icon-moon" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+        </svg>
+      </button>
       <button class="btn-refresh" id="refresh-btn" onclick="doRefresh()">
         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -951,6 +1019,27 @@ body::before {
 
 <script>
 'use strict';
+
+/* ═══════════════ THEME ══════════════════════════════════════ */
+(function() {
+  const saved = localStorage.getItem('pmc-theme');
+  if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+})();
+
+function applyTheme(theme) {
+  if (theme === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+  localStorage.setItem('pmc-theme', theme);
+  if (state.pmcSeries.length) drawChart(state.pmcSeries);
+}
+
+function toggleTheme() {
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  applyTheme(isLight ? 'dark' : 'light');
+}
 
 /* ═══════════════ STATE ═════════════════════════════════════ */
 const state = {
@@ -1259,14 +1348,14 @@ function renderDash(data) {
   if (deepPct != null) {
     html += `
     <div class="sleep-bar" style="margin-top:14px">
-      <div style="flex:${deepPct};background:#4361ee"></div>
-      <div style="flex:${lightPct};background:#7b8cde"></div>
-      <div style="flex:${remPct};background:#9f86c0"></div>
+      <div style="flex:${deepPct};background:var(--sleep-deep)"></div>
+      <div style="flex:${lightPct};background:var(--sleep-light)"></div>
+      <div style="flex:${remPct};background:var(--sleep-rem)"></div>
     </div>
     <div class="sleep-legend">
-      <div class="sl-item"><div class="sl-dot" style="background:#4361ee"></div>Deep ${deepPct.toFixed(0)}%</div>
-      <div class="sl-item"><div class="sl-dot" style="background:#7b8cde"></div>Light ${lightPct.toFixed(0)}%</div>
-      <div class="sl-item"><div class="sl-dot" style="background:#9f86c0"></div>REM ${remPct.toFixed(0)}%</div>
+      <div class="sl-item"><div class="sl-dot" style="background:var(--sleep-deep)"></div>Deep ${deepPct.toFixed(0)}%</div>
+      <div class="sl-item"><div class="sl-dot" style="background:var(--sleep-light)"></div>Light ${lightPct.toFixed(0)}%</div>
+      <div class="sl-item"><div class="sl-dot" style="background:var(--sleep-rem)"></div>REM ${remPct.toFixed(0)}%</div>
     </div>`;
   }
   if (hrvAvg != null) {
@@ -1571,6 +1660,14 @@ function drawChart(series) {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
+  const cs = getComputedStyle(document.documentElement);
+  const colCTL    = cs.getPropertyValue('--ctl').trim();
+  const colATL    = cs.getPropertyValue('--atl').trim();
+  const colTSB    = cs.getPropertyValue('--tsb').trim();
+  const colGrid   = cs.getPropertyValue('--text3').trim();
+  const colAccent = cs.getPropertyValue('--accent').trim();
+  const colOrange = cs.getPropertyValue('--orange').trim();
+
   const PAD = { top:28, right:28, bottom:44, left:48 };
   const CW = W - PAD.left - PAD.right;
   const CH = H - PAD.top - PAD.bottom;
@@ -1585,12 +1682,12 @@ function drawChart(series) {
 
   // Grid
   ctx.font = `10px 'DM Mono', monospace`;
-  ctx.fillStyle = '#3d4560';
+  ctx.fillStyle = colGrid;
   ctx.textAlign = 'right';
   for (let i = 0; i <= 5; i++) {
     const v = vMin + (vRange / 5) * i;
     const y = yOf(v);
-    ctx.strokeStyle = 'rgba(34,40,58,0.7)';
+    ctx.strokeStyle = 'rgba(127,127,127,0.2)';
     ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + CW, y); ctx.stroke();
     ctx.fillText(v.toFixed(0), PAD.left - 6, y + 3);
@@ -1598,7 +1695,7 @@ function drawChart(series) {
 
   // Zero line (TSB ref)
   const y0 = yOf(0);
-  ctx.strokeStyle = 'rgba(255,214,10,0.12)';
+  ctx.strokeStyle = colTSB + '20';
   ctx.lineWidth = 1;
   ctx.setLineDash([4,4]);
   ctx.beginPath(); ctx.moveTo(PAD.left, y0); ctx.lineTo(PAD.left+CW, y0); ctx.stroke();
@@ -1606,14 +1703,14 @@ function drawChart(series) {
 
   // Month labels
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#3d4560';
+  ctx.fillStyle = colGrid;
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   let lastM = -1;
   series.forEach((s, i) => {
     const m = parseInt(s.date.slice(5,7)) - 1;
     if (m !== lastM) {
       const x = xOf(i);
-      ctx.strokeStyle = 'rgba(34,40,58,0.4)';
+      ctx.strokeStyle = 'rgba(127,127,127,0.15)';
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(x, PAD.top); ctx.lineTo(x, PAD.top+CH); ctx.stroke();
       ctx.fillText(months[m], x + 14, PAD.top + CH + 16);
@@ -1629,14 +1726,14 @@ function drawChart(series) {
     const y  = yOf(s.tss);
     const bh = yOf(0) - y;
     if (bh <= 0) return;
-    ctx.fillStyle = 'rgba(255,123,61,0.3)';
+    ctx.fillStyle = colOrange + '4d';
     ctx.fillRect(x - barW/2, y, barW, bh);
   });
 
   // CTL fill
   const ctlGrad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + CH);
-  ctlGrad.addColorStop(0, 'rgba(74,158,255,0.2)');
-  ctlGrad.addColorStop(1, 'rgba(74,158,255,0)');
+  ctlGrad.addColorStop(0, colCTL + '33');
+  ctlGrad.addColorStop(1, colCTL + '00');
   ctx.beginPath();
   series.forEach((s, i) => {
     const x = xOf(i), y = yOf(s.ctl);
@@ -1655,21 +1752,21 @@ function drawChart(series) {
     series.forEach((s,i) => { const x=xOf(i),y=yOf(fn(s)); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
     ctx.stroke();
   };
-  drawLine(s=>s.ctl, '#4a9eff', 2.5);
-  drawLine(s=>s.atl, '#ff6b9d', 1.8);
-  drawLine(s=>s.tsb, '#ffd60a', 1.5);
+  drawLine(s=>s.ctl, colCTL, 2.5);
+  drawLine(s=>s.atl, colATL, 1.8);
+  drawLine(s=>s.tsb, colTSB, 1.5);
 
   // Today marker
   const today = new Date().toISOString().slice(0,10);
   const todayIdx = series.findIndex(s => s.date === today);
   if (todayIdx >= 0) {
     const tx = xOf(todayIdx);
-    ctx.strokeStyle = 'rgba(74,255,180,0.35)';
+    ctx.strokeStyle = colAccent + '59';
     ctx.lineWidth = 1;
     ctx.setLineDash([3,3]);
     ctx.beginPath(); ctx.moveTo(tx, PAD.top); ctx.lineTo(tx, PAD.top+CH); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = '#4affb4';
+    ctx.fillStyle = colAccent;
     ctx.font = `bold 9px 'DM Mono', monospace`;
     ctx.textAlign = 'center';
     ctx.fillText('TODAY', tx, PAD.top - 8);
@@ -1680,7 +1777,7 @@ function drawChart(series) {
   ctx.translate(13, PAD.top + CH/2);
   ctx.rotate(-Math.PI/2);
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#3d4560';
+  ctx.fillStyle = colGrid;
   ctx.font = `9px 'DM Mono', monospace`;
   ctx.fillText('LOAD / SCORE', 0, 0);
   ctx.restore();
