@@ -1,0 +1,8 @@
+# Claude Code local settings
+.claude/
+
+# Wrangler local cache and state (account IDs, auth tokens)
+.wrangler/
+
+# macOS metadata
+.DS_Store
