@@ -264,7 +264,7 @@ async function fetchAllData(token, date, displayName) {
 
   const [
     statsResp, sleepResp, hrvResp, readinessResp,
-    trainingStatusResp, activitiesResp,
+    trainingStatusResp, activitiesResp, pulseOxResp, respirationResp,
   ] = await Promise.all([
     garminGet(`/usersummary-service/usersummary/daily/${displayName}?calendarDate=${date}`, token),
     garminGet(`/wellness-service/wellness/dailySleep/${displayName}?date=${date}&nonSleepBufferMinutes=60`, token),
@@ -272,10 +272,12 @@ async function fetchAllData(token, date, displayName) {
     garminGet(`/training-service/training/metrics/trainingReadiness/${date}`, token),
     garminGet(`/metrics-service/metrics/trainingStatus/aggregated/${date}`, token),
     garminGet(`/activitylist-service/activities/search/activities?startDate=${startStr}&endDate=${date}&limit=100&start=0`, token),
+    garminGet(`/wellness-service/wellness/pulseOx/${displayName}?date=${date}`, token),
+    garminGet(`/wellness-service/wellness/dailyRespirationSummary/${displayName}/${date}`, token),
   ]);
 
-  const responses = [statsResp, sleepResp, hrvResp, readinessResp, trainingStatusResp, activitiesResp];
-  const labels = ['stats', 'sleep', 'hrv', 'readiness', 'trainingStatus', 'activities'];
+  const responses = [statsResp, sleepResp, hrvResp, readinessResp, trainingStatusResp, activitiesResp, pulseOxResp, respirationResp];
+  const labels = ['stats', 'sleep', 'hrv', 'readiness', 'trainingStatus', 'activities', 'pulseOx', 'respiration'];
   const debug = labels.map((l, i) => `${l}:${responses[i].status}`).join(', ');
 
   const errors = {};
@@ -286,8 +288,8 @@ async function fetchAllData(token, date, displayName) {
   }));
   const parsed = texts.map(text => { try { return JSON.parse(text); } catch(e) { return null; } });
 
-  const [stats, sleep, hrv, readiness, trainingStatus, activities] = parsed;
-  const result = { date, displayName, stats, sleep, hrv, readiness, trainingStatus, activities, _debug: debug };
+  const [stats, sleep, hrv, readiness, trainingStatus, activities, pulseOx, respiration] = parsed;
+  const result = { date, displayName, stats, sleep, hrv, readiness, trainingStatus, activities, pulseOx, respiration, _debug: debug };
   if (Object.keys(errors).length) result._errors = errors;
   return result;
 }

@@ -694,6 +694,164 @@ body::before {
   font-size: 13px;
 }
 
+/* ── ACWR Gauge ───────────────────────────────────────── */
+.acwr-gauge-wrap {
+  margin-top: 14px;
+}
+.acwr-gauge-track {
+  position: relative;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(to right,
+    var(--accent2) 0%, var(--accent2) 20%,
+    var(--success) 20%, var(--success) 65%,
+    var(--tsb) 65%, var(--tsb) 75%,
+    var(--danger) 75%, var(--danger) 100%
+  );
+  opacity: 0.25;
+}
+.acwr-gauge-fill {
+  position: absolute;
+  top: 0; left: 0;
+  height: 10px;
+  border-radius: 5px;
+  transition: width 1.2s cubic-bezier(0.4,0,0.2,1);
+}
+.acwr-needle {
+  position: absolute;
+  top: -4px;
+  width: 3px; height: 18px;
+  background: var(--text);
+  border-radius: 2px;
+  transform: translateX(-50%);
+  transition: left 1.2s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: 0 0 6px rgba(0,0,0,0.6);
+}
+.acwr-zones {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text3);
+  letter-spacing: 0.05em;
+}
+
+/* ── ANS / HRV Baseline bar ───────────────────────────── */
+.hrv-baseline-bar {
+  position: relative;
+  height: 6px;
+  background: var(--border2);
+  border-radius: 3px;
+  margin: 10px 0 4px;
+  overflow: visible;
+}
+.hrv-baseline-zone {
+  position: absolute;
+  height: 100%;
+  background: rgba(74,255,180,0.2);
+  border-radius: 3px;
+}
+.hrv-baseline-dot {
+  position: absolute;
+  top: 50%;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: left 1.2s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ── SpO2 ring (reuses ring-wrap) ────────────────────── */
+.spo2-altitude-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 8px;
+}
+
+/* ── Respiration side-by-side ────────────────────────── */
+.resp-pair {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 14px;
+}
+.resp-block { flex: 1; }
+.resp-value {
+  font-family: var(--mono);
+  font-size: 36px;
+  font-weight: 500;
+  line-height: 1;
+}
+.resp-label {
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* ── Overtraining Risk bar ───────────────────────────── */
+.risk-bar-track {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(to right, #4affb4, #ffd60a 50%, #ff4d6d);
+  position: relative;
+  overflow: visible;
+  margin: 14px 0 8px;
+}
+.risk-needle {
+  position: absolute;
+  top: -5px;
+  width: 4px; height: 22px;
+  background: var(--text);
+  border-radius: 2px;
+  transform: translateX(-50%);
+  transition: left 1.2s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: 0 0 8px rgba(0,0,0,0.7);
+}
+.risk-zones {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text3);
+  letter-spacing: 0.05em;
+  margin-bottom: 14px;
+}
+.risk-factors {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 20px;
+  margin-top: 10px;
+}
+.risk-factor-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(34,40,58,0.6);
+}
+.risk-factor-row:last-child { border-bottom: none; }
+.rf-label { color: var(--text2); }
+.rf-val { font-family: var(--mono); font-size: 11px; }
+
+/* ── Altitude stress flag ────────────────────────────── */
+.altitude-flag {
+  background: rgba(255,123,61,0.12);
+  border: 1px solid rgba(255,123,61,0.3);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 11px;
+  color: var(--orange);
+  line-height: 1.5;
+  margin-top: 10px;
+}
+
 /* Responsive */
 @media (max-width: 1000px) {
   .kpi-row { grid-template-columns: repeat(2, 1fr); }
@@ -705,6 +863,7 @@ body::before {
   .dash-content { padding: 16px; }
   .topbar { padding: 12px 16px; }
   .kpi-value { font-size: 36px; }
+  .risk-factors { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -890,7 +1049,7 @@ function dateLabel(str) {
 
 /* ═══════════════ RENDER DASHBOARD ═════════════════════════ */
 function renderDash(data) {
-  const { stats, sleep, hrv, readiness, trainingStatus, activities } = data;
+  const { stats, sleep, hrv, readiness, trainingStatus, activities, pulseOx, respiration } = data;
   const series = computePMC(activities);
   state.pmcSeries = series;
   const last = series[series.length - 1] || {};
@@ -917,7 +1076,6 @@ function renderDash(data) {
 
   // Daily stats
   const s = stats || {};
-  const bb = s.bodyBattery?.charged != null ? s : null;
 
   // Training status
   const ts = Array.isArray(trainingStatus) ? trainingStatus[0] : trainingStatus;
@@ -925,6 +1083,56 @@ function renderDash(data) {
 
   // TSB readiness
   const tsbInfo = tsbLabel(last.tsb || 0);
+
+  // ── Derived / advanced metrics ────────────────────────────────────────
+  // ACWR (Gabbett 2016)
+  const acwr = (last.ctl > 0) ? last.atl / last.ctl : null;
+  const acwrData = (() => {
+    if (acwr == null) return { label: '—', color: 'var(--text3)' };
+    if (acwr > 1.5)  return { label: 'Injury Risk', color: 'var(--danger)' };
+    if (acwr > 1.3)  return { label: 'Gray Zone',   color: 'var(--tsb)' };
+    if (acwr > 0.8)  return { label: 'Optimal',     color: 'var(--success)' };
+    return               { label: 'Detraining',   color: 'var(--accent2)' };
+  })();
+
+  // ANS Recovery Index (Plews et al. 2014)
+  const hrvRhrRatio = (hrvAvg && s.restingHeartRate) ? (hrvAvg / s.restingHeartRate) : null;
+  const baselineMid = (hrvBaseLo != null && hrvBaseHi != null) ? (hrvBaseLo + hrvBaseHi) / 2 : null;
+  const baselineRange = (hrvBaseLo != null && hrvBaseHi != null) ? Math.max(1, hrvBaseHi - hrvBaseLo) : 1;
+  const hrvDev = (hrvAvg != null && baselineMid != null) ? (hrvAvg - baselineMid) / baselineRange : null;
+  const ansStatus = hrvDev == null ? null : (hrvDev < -0.5 ? 'Suppressed' : (hrvDev > 0.5 ? 'Elevated' : 'Normal'));
+  const ansColor = ansStatus === 'Suppressed' ? 'var(--danger)' : (ansStatus === 'Elevated' ? 'var(--success)' : 'var(--tsb)');
+
+  // SpO2 / Altitude (Roach & Hackett 2001)
+  const pox = pulseOx || {};
+  const spo2Val = pox.userDailySummary?.averageSPO2 ?? pox.averageSPO2 ?? pox.onDemandReading?.spo2Reading?.spo2Value ?? null;
+  const spo2Low = pox.userDailySummary?.lowestSPO2 ?? pox.lowestSPO2 ?? null;
+  const spo2Color = spo2Val == null ? 'var(--text3)' : (spo2Val >= 95 ? 'var(--success)' : (spo2Val >= 90 ? 'var(--tsb)' : 'var(--danger)'));
+  // Linear estimate: 95% ≈ sea level, 85% ≈ 4500m
+  const altEstimate = (spo2Val != null && spo2Val < 95) ? Math.round(((95 - spo2Val) / 10) * 4500) : null;
+  const altitudeStressFlag = spo2Val != null && spo2Val < 93 && s.restingHeartRate > 60 && hrvDev != null && hrvDev < -0.3;
+
+  // Respiration (Plews et al. 2021)
+  const resp = respiration || {};
+  const wakingResp   = resp.avgWakingRespirationValue   ?? s.averageWakingRespirationValue ?? null;
+  const sleepingResp = resp.avgSleepingRespirationValue ?? null;
+  const highResp = resp.highestRespirationValue ?? null;
+  const lowResp  = resp.lowestRespirationValue  ?? null;
+
+  // Overtraining Risk Score (Meeusen et al. 2013 MSSE)
+  const riskScore = (() => {
+    let r = 0;
+    const tsb = last.tsb || 0;
+    if (tsb < -30) r += 35; else if (tsb < -10) r += 10; else if (tsb > 25) r += 15;
+    if (acwr != null) { if (acwr > 1.5) r += 30; else if (acwr > 1.3) r += 15; }
+    if (hrvDev != null) { if (hrvDev < -1) r += 20; else if (hrvDev < -0.5) r += 10; }
+    if (slpScore != null) { if (slpScore < 60) r += 10; else if (slpScore < 75) r += 5; }
+    const bbVal = s.bodyBatteryMostRecentValue ?? s.bodyBatteryHighestValue ?? null;
+    if (bbVal != null && bbVal < 40) r += 5;
+    return Math.min(100, r);
+  })();
+  const riskColor = riskScore >= 60 ? 'var(--danger)' : (riskScore >= 35 ? 'var(--tsb)' : 'var(--success)');
+  const riskLabel = riskScore >= 60 ? 'High Risk' : (riskScore >= 35 ? 'Moderate' : 'Low');
 
   // Recent activities (last 7 days)
   const sevenAgo = new Date(); sevenAgo.setDate(sevenAgo.getDate() - 7);
@@ -1021,7 +1229,18 @@ function renderDash(data) {
     <div class="metric-row"><span class="ml">Chronic Load (CTL)</span><span class="mv blue">${fmt(last.ctl)}</span></div>
     <div class="metric-row"><span class="ml">Form (TSB)</span><span class="mv ${tsbInfo.cls}">${fmt(last.tsb)} · ${tsbInfo.text}</span></div>
     ${ts?.vo2MaxValue ? `<div class="metric-row"><span class="ml">VO₂ Max</span><span class="mv blue">${ts.vo2MaxValue} ml/kg/min</span></div>` : ''}
-    ${ts?.acwrStatus  ? `<div class="metric-row"><span class="ml">ACWR Status</span><span class="mv good">${ts.acwrStatus.replace(/_/g,' ')}</span></div>` : ''}
+    <div class="acwr-gauge-wrap">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:11px;color:var(--text2)">ACWR · Acute:Chronic Ratio</span>
+        <span style="font-family:var(--mono);font-size:13px;font-weight:500;color:${acwrData.color}">${acwr != null ? acwr.toFixed(2) : '—'} · ${acwrData.label}</span>
+      </div>
+      <div class="acwr-gauge-track" style="opacity:1">
+        <div class="acwr-needle" style="left:${acwr != null ? Math.min(100, (acwr / 2) * 100) : 0}%"></div>
+      </div>
+      <div class="acwr-zones">
+        <span>0</span><span>Detraining</span><span>Optimal</span><span>Gray</span><span>Risk</span><span>2.0</span>
+      </div>
+    </div>
   </div>`;
   html += `</div>`; // end two-col
 
@@ -1094,7 +1313,110 @@ function renderDash(data) {
     <div class="metric-row"><span class="ml">Respiration avg</span><span class="mv">${s.averageWakingRespirationValue ?? '—'} br/m</span></div>
   </div>`;
 
-  html += `</div>`; // end three-col
+  html += `</div>`; // end three-col (Sleep / Body Battery / HR&Stress)
+
+  // ── Second three-col: ANS Recovery + SpO2 + Respiration ───────────────
+  html += `<div class="three-col">`;
+
+  // ANS Recovery Index card
+  html += `<div class="card" style="--card-accent:var(--accent);animation-delay:0.5s">
+    <div class="card-title">ANS Recovery</div>`;
+  if (hrvRhrRatio != null) {
+    html += `<div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px">
+      <div class="big-stat" style="color:${ansColor};font-size:40px">${hrvRhrRatio.toFixed(2)}</div>
+      <div class="stat-sub">HRV:RHR ratio</div>
+    </div>
+    ${ansStatus ? `<div style="font-size:13px;font-weight:700;color:${ansColor};margin-bottom:10px;letter-spacing:.04em">${ansStatus}</div>` : ''}`;
+    if (baselineMid != null) {
+      const rangeSpan = baselineRange * 2;
+      const dotLeft = Math.max(2, Math.min(98, ((hrvAvg - (baselineMid - baselineRange)) / rangeSpan) * 100));
+      const zoneLeft = 25;
+      const zoneWidth = 50;
+      html += `<div style="font-size:11px;color:var(--text3);margin-bottom:4px">Position in HRV baseline</div>
+      <div class="hrv-baseline-bar">
+        <div class="hrv-baseline-zone" style="left:${zoneLeft}%;width:${zoneWidth}%"></div>
+        <div class="hrv-baseline-dot" style="left:${dotLeft}%;background:${ansColor}"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-bottom:10px">
+        <span>Suppressed</span><span>Baseline zone</span><span>Elevated</span>
+      </div>`;
+    }
+    html += `<div class="metric-row"><span class="ml">HRV overnight avg</span><span class="mv good">${fmt(hrvAvg, 0)} ms</span></div>`;
+    if (hrvBaseLo != null) {
+      html += `<div class="metric-row"><span class="ml">Baseline band</span><span class="mv">${fmt(hrvBaseLo,0)}–${fmt(hrvBaseHi,0)} ms</span></div>`;
+    }
+    html += `<div class="metric-row"><span class="ml">Resting HR</span><span class="mv">${s.restingHeartRate ?? '—'} bpm</span></div>`;
+  } else {
+    html += `<div style="color:var(--text3);font-size:13px;margin-top:8px">No HRV data available</div>`;
+  }
+  html += `</div>`;
+
+  // SpO2 / Altitude card
+  html += `<div class="card" style="--card-accent:var(--accent2);animation-delay:0.55s">
+    <div class="card-title">Blood Oxygen · SpO₂</div>`;
+  if (spo2Val != null) {
+    const circ = 251;
+    const pct = Math.max(0, Math.min(100, (spo2Val - 80) / 20));
+    const offset = circ - pct * circ;
+    html += `<div style="display:flex;align-items:center;gap:18px;margin-bottom:12px">
+      <div class="ring-wrap">
+        <svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="40" fill="none" stroke="var(--border2)" stroke-width="8"/>
+          <circle cx="50" cy="50" r="40" fill="none" stroke="${spo2Color}" stroke-width="8"
+            stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/>
+        </svg>
+        <div class="ring-center">
+          <div class="ring-score" style="color:${spo2Color};font-size:22px">${spo2Val}%</div>
+          <div class="ring-tag">SpO₂</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:${spo2Color};margin-bottom:4px">
+          ${spo2Val >= 95 ? 'Normal' : spo2Val >= 90 ? 'Mild Hypoxia' : 'Significant Hypoxia'}
+        </div>
+        ${altEstimate != null ? `<div style="font-size:12px;color:var(--text2)">Est. altitude</div>
+        <div style="font-family:var(--mono);font-size:20px;color:var(--orange)">~${altEstimate.toLocaleString()} m</div>` : ''}
+      </div>
+    </div>`;
+    if (spo2Low != null) {
+      html += `<div class="metric-row"><span class="ml">Lowest reading</span><span class="mv" style="color:${spo2Low < 90 ? 'var(--danger)' : 'var(--text)'}">${spo2Low}%</span></div>`;
+    }
+    html += `<div class="metric-row"><span class="ml">Normal range</span><span class="mv">≥ 95%</span></div>`;
+    if (altitudeStressFlag) {
+      html += `<div class="altitude-flag">Altitude stress signature detected: low SpO₂ + elevated RHR + suppressed HRV</div>`;
+    }
+  } else {
+    html += `<div style="color:var(--text3);font-size:13px;margin-top:8px">No SpO₂ data — enable Pulse Ox on your watch</div>`;
+  }
+  html += `</div>`;
+
+  // Respiration card
+  html += `<div class="card" style="--card-accent:var(--tsb);animation-delay:0.6s">
+    <div class="card-title">Respiration</div>
+    <div class="resp-pair">`;
+  const wRespColor = wakingResp != null && (wakingResp < 12 || wakingResp > 20) ? 'var(--tsb)' : 'var(--text)';
+  const sRespColor = sleepingResp != null && (sleepingResp < 12 || sleepingResp > 16) ? 'var(--tsb)' : 'var(--text)';
+  html += `<div class="resp-block">
+      <div class="resp-value" style="color:${wRespColor}">${wakingResp != null ? wakingResp.toFixed(1) : '—'}</div>
+      <div class="resp-label">Waking br/min</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px">Normal: 12–20</div>
+    </div>
+    <div class="resp-block">
+      <div class="resp-value" style="color:${sRespColor}">${sleepingResp != null ? sleepingResp.toFixed(1) : '—'}</div>
+      <div class="resp-label">Sleeping br/min</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px">Normal: 12–16</div>
+    </div>
+  </div>`;
+  if (highResp != null) {
+    html += `<div class="metric-row"><span class="ml">Daily high</span><span class="mv">${highResp} br/min</span></div>`;
+  }
+  if (lowResp != null) {
+    html += `<div class="metric-row"><span class="ml">Daily low</span><span class="mv">${lowResp} br/min</span></div>`;
+  }
+  html += `<div class="metric-row" style="margin-top:6px"><span class="ml" style="font-size:10px;line-height:1.4">Elevated nocturnal rate is an early recovery stress signal (Plews 2021)</span></div>`;
+  html += `</div>`;
+
+  html += `</div>`; // end second three-col
 
   // Steps + calories mini row
   html += `<div class="two-col">
@@ -1138,6 +1460,59 @@ function renderDash(data) {
     });
   }
   html += `</div></div>`; // card + two-col
+
+  // ── Recovery Intelligence section ─────────────────────────────────────
+  html += `<div style="font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--text3);margin:20px 0 12px;padding-left:8px;border-left:2px solid var(--orange)">Recovery Intelligence</div>`;
+
+  html += `<div class="card" style="--card-accent:${riskColor};animation-delay:0.65s">
+    <div class="card-title">Overtraining Risk Score</div>
+    <div style="display:flex;align-items:center;gap:24px;margin-bottom:4px">
+      <div>
+        <div style="font-family:var(--mono);font-size:56px;font-weight:500;line-height:1;color:${riskColor}">${riskScore}</div>
+        <div style="font-size:10px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-top:4px">/ 100</div>
+      </div>
+      <div>
+        <div style="font-size:22px;font-weight:800;color:${riskColor};letter-spacing:.04em;text-transform:uppercase">${riskLabel}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:4px;line-height:1.5">Composite of TSB, ACWR, HRV, sleep quality &amp; body battery</div>
+      </div>
+    </div>
+    <div class="risk-bar-track">
+      <div class="risk-needle" style="left:${riskScore}%"></div>
+    </div>
+    <div class="risk-zones">
+      <span style="color:var(--success)">Low</span>
+      <span>0 ──────────── 35</span>
+      <span style="color:var(--tsb)">Moderate</span>
+      <span>35 ─────────── 60</span>
+      <span style="color:var(--danger)">High</span>
+    </div>
+    <div class="risk-factors">
+      <div class="risk-factor-row">
+        <span class="rf-label">Form (TSB)</span>
+        <span class="rf-val" style="color:${(last.tsb||0) < -30 ? 'var(--danger)' : (last.tsb||0) > 25 ? 'var(--tsb)' : 'var(--success)'}">${fmt(last.tsb)} · ${tsbInfo.text}</span>
+      </div>
+      <div class="risk-factor-row">
+        <span class="rf-label">ACWR</span>
+        <span class="rf-val" style="color:${acwrData.color}">${acwr != null ? acwr.toFixed(2) : '—'} · ${acwrData.label}</span>
+      </div>
+      <div class="risk-factor-row">
+        <span class="rf-label">ANS / HRV</span>
+        <span class="rf-val" style="color:${ansColor ?? 'var(--text3)'}">${ansStatus ?? '—'}</span>
+      </div>
+      <div class="risk-factor-row">
+        <span class="rf-label">Sleep score</span>
+        <span class="rf-val" style="color:${slpScore == null ? 'var(--text3)' : slpScore < 60 ? 'var(--danger)' : slpScore < 75 ? 'var(--tsb)' : 'var(--success)'}">${slpScore ?? '—'}</span>
+      </div>
+      <div class="risk-factor-row">
+        <span class="rf-label">Body battery</span>
+        <span class="rf-val">${s.bodyBatteryMostRecentValue ?? s.bodyBatteryHighestValue ?? '—'}</span>
+      </div>
+      <div class="risk-factor-row">
+        <span class="rf-label">Reference</span>
+        <span class="rf-val" style="color:var(--text3);font-size:9px">Meeusen et al. 2013 MSSE</span>
+      </div>
+    </div>
+  </div>`;
 
   // Methodology
   html += `<div class="methodology" style="animation-delay:0.6s">
