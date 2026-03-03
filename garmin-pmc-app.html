@@ -963,7 +963,7 @@ html[data-theme="light"] body::before { opacity: 0.15; }
     <div class="error-msg" id="login-error"></div>
 
     <div class="login-footer">
-      🔒 <strong>Security note:</strong> This app stores your session token in memory only — it disappears when you close the tab. The Worker code you deploy handles all Garmin authentication. Your password is never logged or persisted anywhere.
+      🔒 <strong>Security note:</strong> Credentials are saved in <code>sessionStorage</code> for auto-login on refresh — they are scoped to this browser tab and cleared automatically when you close it or sign out. Your Worker handles all Garmin authentication; nothing is sent to third parties.
     </div>
   </div>
 </div>
@@ -1855,9 +1855,10 @@ async function doLogin() {
     state.token       = auth.token;
     state.displayName = auth.displayName || username.split('@')[0];
 
-    // Store worker URL in sessionStorage for convenience (NOT credentials)
     sessionStorage.setItem('garmin_worker', workerUrl);
     sessionStorage.setItem('garmin_display', state.displayName);
+    sessionStorage.setItem('garmin_user', username);
+    sessionStorage.setItem('garmin_pass', password);
 
     setLoading(true, 'FETCHING GARMIN DATA…');
     const data = await fetchData();
@@ -1912,8 +1913,17 @@ function doLogout() {
 
 // Pre-fill worker URL if remembered
 window.addEventListener('DOMContentLoaded', () => {
-  const savedWorker  = sessionStorage.getItem('garmin_worker');
+  const savedWorker = sessionStorage.getItem('garmin_worker');
+  const savedUser   = sessionStorage.getItem('garmin_user');
+  const savedPass   = sessionStorage.getItem('garmin_pass');
+
   if (savedWorker) document.getElementById('worker-url').value = savedWorker;
+
+  if (savedUser && savedPass) {
+    document.getElementById('garmin-user').value = savedUser;
+    document.getElementById('garmin-pass').value = savedPass;
+    doLogin();
+  }
 
   // Enter key on password → login
   document.getElementById('garmin-pass').addEventListener('keydown', e => {
