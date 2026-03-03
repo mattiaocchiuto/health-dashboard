@@ -116,11 +116,9 @@ wrangler secret put CONSUMER_KEY
 wrangler secret put CONSUMER_SECRET
 ```
 
-The values (sourced from the public [garth](https://github.com/matin/garth) library):
-- `CONSUMER_KEY` — `fc3e99d2-118c-44b8-8ae3-03370dde24c0`
-- `CONSUMER_SECRET` — `E08WAR897WEy2knn7aFBrvegVAf0AFdWBBF`
+The values come from the public [garth](https://github.com/matin/garth) library — look them up there.
 
-Secrets are encrypted at rest and are never visible in the Cloudflare dashboard after being set.
+Secrets are encrypted at rest by Cloudflare and are never visible in the dashboard after being set.
 
 ### 2. Deploy the worker
 
