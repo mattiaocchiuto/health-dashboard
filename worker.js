@@ -1,7 +1,10 @@
 /**
  * Garmin Connect Proxy — Cloudflare Worker (OAuth2)
  * ─────────────────────────────────────────────────
- * Deploy at: https://dash.cloudflare.com → Workers → Create Worker → Paste → Deploy
+ * Deploy via Wrangler:
+ *   wrangler secret put CONSUMER_KEY
+ *   wrangler secret put CONSUMER_SECRET
+ *   wrangler deploy
  *
  * Auth flow:
  *   1. Garmin SSO login  → service ticket
@@ -28,9 +31,10 @@ const API_HOST     = 'https://connectapi.garmin.com';
 const UA        = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 const MOBILE_UA = 'com.garmin.android.apps.connectmobile';
 
-// OAuth1 consumer credentials — from garth's public S3 bucket (thegarth.s3.amazonaws.com)
-const CONSUMER_KEY    = 'fc3e99d2-118c-44b8-8ae3-03370dde24c0';
-const CONSUMER_SECRET = 'E08WAR897WEy2knn7aFBrvegVAf0AFdWBBF';
+// OAuth1 consumer credentials are injected at runtime via Cloudflare secrets:
+//   wrangler secret put CONSUMER_KEY
+//   wrangler secret put CONSUMER_SECRET
+// Values sourced from garth's public S3 bucket (thegarth.s3.amazonaws.com)
 
 // ── Cookie utilities ──────────────────────────────────────────────────────────
 
@@ -75,13 +79,13 @@ async function hmacSha1Base64(key, message) {
   return btoa(binary);
 }
 
-async function oauth1AuthHeader(method, url, oauthToken = '', oauthTokenSecret = '') {
+async function oauth1AuthHeader(method, url, consumerKey, consumerSecret, oauthToken = '', oauthTokenSecret = '') {
   const ts = Math.floor(Date.now() / 1000).toString();
   const nonce = Array.from(crypto.getRandomValues(new Uint8Array(16)))
     .map(b => b.toString(16).padStart(2, '0')).join('');
 
   const oauthParams = {
-    oauth_consumer_key:     CONSUMER_KEY,
+    oauth_consumer_key:     consumerKey,
     oauth_nonce:            nonce,
     oauth_signature_method: 'HMAC-SHA1',
     oauth_timestamp:        ts,
@@ -102,7 +106,7 @@ async function oauth1AuthHeader(method, url, oauthToken = '', oauthTokenSecret =
   // Base URL is scheme + host + path (no query string)
   const baseUrl = `${urlObj.protocol}//${urlObj.host}${urlObj.pathname}`;
   const baseStr = `${method.toUpperCase()}&${pctEnc(baseUrl)}&${pctEnc(paramStr)}`;
-  const signingKey = `${pctEnc(CONSUMER_SECRET)}&${pctEnc(oauthTokenSecret)}`;
+  const signingKey = `${pctEnc(consumerSecret)}&${pctEnc(oauthTokenSecret)}`;
 
   oauthParams.oauth_signature = await hmacSha1Base64(signingKey, baseStr);
 
@@ -113,7 +117,7 @@ async function oauth1AuthHeader(method, url, oauthToken = '', oauthTokenSecret =
 // ── Garmin authentication ─────────────────────────────────────────────────────
 // Flow mirrors garth (github.com/matin/garth) exactly.
 
-async function garminAuth(username, password) {
+async function garminAuth(username, password, consumerKey, consumerSecret) {
   let cookies = {};
 
   const SSO       = `${SSO_HOST}/sso`;
@@ -193,7 +197,7 @@ async function garminAuth(username, password) {
     method: 'GET',
     headers: {
       'User-Agent': MOBILE_UA,
-      'Authorization': await oauth1AuthHeader('GET', preAuthFullUrl),
+      'Authorization': await oauth1AuthHeader('GET', preAuthFullUrl, consumerKey, consumerSecret),
     },
   });
   if (!preAuthResp.ok) {
@@ -212,7 +216,7 @@ async function garminAuth(username, password) {
     method: 'POST',
     headers: {
       'User-Agent': MOBILE_UA,
-      'Authorization': await oauth1AuthHeader('POST', exchangeUrl, oauth1Params.oauth_token, oauth1Params.oauth_token_secret),
+      'Authorization': await oauth1AuthHeader('POST', exchangeUrl, consumerKey, consumerSecret, oauth1Params.oauth_token, oauth1Params.oauth_token_secret),
       'Content-Type': 'application/x-www-form-urlencoded',
     },
   });
@@ -297,40 +301,44 @@ function jsonResponse(body, opts = {}) {
   });
 }
 
-addEventListener('fetch', (event) => {
-  event.respondWith(handleRequest(event.request));
-});
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
 
-async function handleRequest(request) {
-  const url = new URL(request.url);
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: CORS });
+    }
 
-  if (request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: CORS });
-  }
+    const consumerKey    = env.CONSUMER_KEY;
+    const consumerSecret = env.CONSUMER_SECRET;
+    if (!consumerKey || !consumerSecret) {
+      return jsonResponse({ error: 'Worker secrets not configured. Run: wrangler secret put CONSUMER_KEY && wrangler secret put CONSUMER_SECRET' }, { status: 500 });
+    }
 
-  try {
-    if (url.pathname === '/auth' && request.method === 'POST') {
-      const { username, password } = await request.json();
-      if (!username || !password) {
-        return jsonResponse({ error: 'username and password required' }, { status: 400 });
+    try {
+      if (url.pathname === '/auth' && request.method === 'POST') {
+        const { username, password } = await request.json();
+        if (!username || !password) {
+          return jsonResponse({ error: 'username and password required' }, { status: 400 });
+        }
+        const result = await garminAuth(username, password, consumerKey, consumerSecret);
+        return jsonResponse(result);
       }
-      const result = await garminAuth(username, password);
-      return jsonResponse(result);
+
+      if (url.pathname === '/data' && request.method === 'POST') {
+        const body = await request.json();
+        const token = body.token;
+        const date = body.date || new Date().toISOString().slice(0, 10);
+        const displayName = body.displayName || '';
+        if (!token) return jsonResponse({ error: 'token required' }, { status: 401 });
+        const data = await fetchAllData(token, date, displayName);
+        return jsonResponse(data);
+      }
+
+      return jsonResponse({ error: 'Not found' }, { status: 404 });
+
+    } catch (err) {
+      return jsonResponse({ error: err.message }, { status: 500 });
     }
-
-    if (url.pathname === '/data' && request.method === 'POST') {
-      const body = await request.json();
-      const token = body.token;
-      const date = body.date || new Date().toISOString().slice(0, 10);
-      const displayName = body.displayName || '';
-      if (!token) return jsonResponse({ error: 'token required' }, { status: 401 });
-      const data = await fetchAllData(token, date, displayName);
-      return jsonResponse(data);
-    }
-
-    return jsonResponse({ error: 'Not found' }, { status: 404 });
-
-  } catch (err) {
-    return jsonResponse({ error: err.message }, { status: 500 });
-  }
-}
+  },
+};

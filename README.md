@@ -4,14 +4,15 @@ A self-contained, zero-dependency SPA that connects to Garmin Connect and displa
 
 ## Overview
 
-The project is two files:
+The project is three files:
 
 | File | Purpose |
 |------|---------|
 | `garmin-pmc-app.html` | Complete frontend — HTML, CSS, and vanilla JS in one file |
 | `worker.js` | Cloudflare Worker that proxies Garmin SSO authentication and data fetching |
+| `wrangler.toml` | Cloudflare Workers deployment configuration |
 
-No build step, no package manager, no dependencies.
+No build step, no package manager, no frontend dependencies.
 
 ---
 
@@ -97,14 +98,37 @@ TSB interpretation: `> 25` Tapered · `5–25` Race Ready · `-10–5` Maintenan
 
 ## Setup
 
-### 1. Deploy the Cloudflare Worker
+### Prerequisites
 
-1. Go to [dash.cloudflare.com](https://dash.cloudflare.com) → **Workers & Pages** → **Create application** → **Create Worker**
-2. Paste the contents of `worker.js` into the editor
-3. Click **Deploy**
-4. Copy the worker URL (e.g. `https://your-worker.your-subdomain.workers.dev`)
+Install the Wrangler CLI (requires Node.js):
 
-No environment variables or secrets need to be configured — the OAuth consumer credentials are embedded in the worker (sourced from the public `garth` library).
+```bash
+npm install -g wrangler
+wrangler login
+```
+
+### 1. Set the worker secrets
+
+The OAuth1 consumer credentials are stored as Cloudflare encrypted secrets — never in source code. Run these two commands and paste the values when prompted:
+
+```bash
+wrangler secret put CONSUMER_KEY
+wrangler secret put CONSUMER_SECRET
+```
+
+The values (sourced from the public [garth](https://github.com/matin/garth) library):
+- `CONSUMER_KEY` — `fc3e99d2-118c-44b8-8ae3-03370dde24c0`
+- `CONSUMER_SECRET` — `E08WAR897WEy2knn7aFBrvegVAf0AFdWBBF`
+
+Secrets are encrypted at rest and are never visible in the Cloudflare dashboard after being set.
+
+### 2. Deploy the worker
+
+```bash
+wrangler deploy
+```
+
+Copy the worker URL printed on success (e.g. `https://garmin-pmc-worker.your-subdomain.workers.dev`).
 
 ### 2. Open the Frontend
 

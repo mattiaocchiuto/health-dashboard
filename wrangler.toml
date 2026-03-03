@@ -1,3 +1,7 @@
-name = "garmin-proxy"
+name = "garmin-pmc-worker"
 main = "worker.js"
-compatibility_date = "2024-01-01"
+compatibility_date = "2024-09-23"
+
+# Secrets are NOT defined here — set them via CLI so they are never stored in plaintext:
+#   wrangler secret put CONSUMER_KEY
+#   wrangler secret put CONSUMER_SECRET
