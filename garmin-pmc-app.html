@@ -1149,11 +1149,13 @@ function renderDash(data) {
   const readyLevel = ready?.level ?? null;
   const readyDesc  = (ready?.feedback || '').replace(/_/g,' ').toLowerCase();
 
-  // Sleep
-  const slp = sleep?.dailySleepDTO || sleep || {};
+  // Sleep — primary: dailySleep endpoint; fallback: stats fields (when sleep endpoint returns 405/error)
+  const slpErr = sleep?.error || sleep?.type === 'NotAllowedException';
+  const slp = slpErr ? {} : (sleep?.dailySleepDTO || sleep || {});
   const slpScore = slp.sleepScores?.overall?.value ?? slp.sleepScore ?? null;
   const slpQual  = slp.sleepScores?.overall?.qualifier ?? slp.sleepScoreQualifier ?? '—';
-  const slpH     = slp.sleepTimeSeconds   ? (slp.sleepTimeSeconds/3600) : null;
+  const slpSecs  = slp.sleepTimeSeconds || (slpErr && stats?.sleepingSeconds) || null;
+  const slpH     = slpSecs ? slpSecs / 3600 : null;
   const deepPct  = slp.deepSleepSeconds   && slp.sleepTimeSeconds ? (slp.deepSleepSeconds/slp.sleepTimeSeconds*100) : null;
   const lightPct = slp.lightSleepSeconds  && slp.sleepTimeSeconds ? (slp.lightSleepSeconds/slp.sleepTimeSeconds*100) : null;
   const remPct   = slp.remSleepSeconds    && slp.sleepTimeSeconds ? (slp.remSleepSeconds/slp.sleepTimeSeconds*100) : null;
@@ -1344,7 +1346,7 @@ function renderDash(data) {
     <div class="big-stat colored" style="--card-accent:var(--accent2);color:var(--accent2)">
       ${slpH != null ? slpH.toFixed(1) : '—'}<span style="font-size:18px;color:var(--text3)"> h</span>
     </div>
-    <div class="stat-sub">${slpQual ? slpQual.replace(/_/g,' ') : '—'}${slpScore ? ` · Score ${slpScore}` : ''}</div>`;
+    <div class="stat-sub">${slpErr && slpH != null ? 'from daily stats' : (slpQual ? slpQual.replace(/_/g,' ') : '—')}${slpScore ? ` · Score ${slpScore}` : ''}</div>`;
   if (deepPct != null) {
     html += `
     <div class="sleep-bar" style="margin-top:14px">
@@ -1757,7 +1759,7 @@ function drawChart(series) {
   drawLine(s=>s.tsb, colTSB, 1.5);
 
   // Today marker
-  const today = new Date().toISOString().slice(0,10);
+  const today = new Date().toLocaleDateString('en-CA');
   const todayIdx = series.findIndex(s => s.date === today);
   if (todayIdx >= 0) {
     const tx = xOf(todayIdx);
@@ -1811,7 +1813,7 @@ function setLoading(show, msg='LOADING…') {
 }
 
 async function fetchData() {
-  const today = new Date().toISOString().slice(0,10);
+  const today = new Date().toLocaleDateString('en-CA'); // local date (YYYY-MM-DD), not UTC
   const resp = await fetch(`${state.workerUrl}/data`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -330,7 +330,7 @@ export default {
       if (url.pathname === '/data' && request.method === 'POST') {
         const body = await request.json();
         const token = body.token;
-        const date = body.date || new Date().toISOString().slice(0, 10);
+        const date = body.date || new Date().toLocaleDateString('en-CA'); // local date fallback
         const displayName = body.displayName || '';
         if (!token) return jsonResponse({ error: 'token required' }, { status: 401 });
         const data = await fetchAllData(token, date, displayName);
