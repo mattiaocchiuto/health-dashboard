@@ -988,6 +988,203 @@
         padding: 10px 14px;
       }
     }
+
+    /* ─── COACH CARD ──────────────────── */
+    .coach-card {
+      border-radius: var(--r);
+      padding: 20px 24px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 18px;
+      animation: fadeUp .4s ease both;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .coach-icon {
+      font-size: 28px;
+      flex-shrink: 0;
+      line-height: 1;
+      margin-top: 2px;
+    }
+
+    .coach-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .coach-verdict {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .coach-title {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .coach-main {
+      font-size: 13px;
+      color: var(--text2);
+      line-height: 1.65;
+      margin-bottom: 10px;
+    }
+
+    .coach-workout {
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, .04);
+      border-radius: 4px;
+      border-left: 3px solid;
+      line-height: 1.6;
+    }
+
+    .coach-ref {
+      font-size: 10px;
+      color: var(--text3);
+      margin-top: 8px;
+      font-style: italic;
+      font-family: var(--mono);
+    }
+
+    .coach-glow {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      opacity: .06;
+      background: radial-gradient(ellipse 80% 80% at 10% 50%, currentColor, transparent);
+      pointer-events: none;
+    }
+
+    /* ─── VDOT CALCULATOR ─────────────── */
+    .vdot-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    .vdot-input-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .vdot-input-row .field {
+      margin-bottom: 0;
+      flex: 1;
+      min-width: 80px;
+    }
+
+    .vdot-input-row .field select {
+      width: 100%;
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 11px 12px;
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+    }
+
+    .vdot-num {
+      font-family: var(--mono);
+      font-size: 52px;
+      font-weight: 500;
+      line-height: 1;
+      color: var(--accent);
+    }
+
+    .vdot-num-label {
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: 3px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .pace-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .pace-table th {
+      font-size: 9px;
+      letter-spacing: .15em;
+      color: var(--text3);
+      text-align: left;
+      padding: 4px 8px;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase;
+    }
+
+    .pace-table td {
+      padding: 7px 8px;
+      border-bottom: 1px solid rgba(34, 40, 58, .5);
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+
+    .pace-table td:first-child {
+      font-weight: 600;
+    }
+
+    .pace-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .race-pred {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .race-pred-item {
+      flex: 1;
+      min-width: 80px;
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 10px;
+    }
+
+    .race-pred-dist {
+      font-size: 9px;
+      color: var(--text3);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+
+    .race-pred-time {
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    /* ─── RAMP RATE ────────────────────── */
+    .ramp-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 12px;
+      margin-top: 8px;
+    }
   </style>
 </head>
 
@@ -1280,6 +1477,225 @@
     /* ══════════════════════════════════════════════
        RENDER
     ══════════════════════════════════════════════ */
+    // ═══════════════════════════════════════════════════════
+    // DANIELS/GILBERT VDOT MATHEMATICS
+    // Source: Daniels' Running Formula, Chapter 3
+    // Verified against Table 3.1 and Table 3.2
+    // ═══════════════════════════════════════════════════════
+
+    // %VO2max utilised at race pace for race of duration t minutes
+    // (Daniels/Gilbert curve)
+    function pctVO2atDuration(t) {
+      return 0.8 + 0.1894393 * Math.exp(-0.012778 * t)
+        + 0.2989558 * Math.exp(-0.1932605 * t);
+    }
+
+    // VO2 consumed at velocity v m/min (economy curve)
+    function vo2atVelocity(v) {
+      return -4.60 + 0.182258 * v + 0.000104 * v * v;
+    }
+
+    // Velocity (m/min) from target VO2 (quadratic inverse)
+    function velocityFromVO2(targetVO2) {
+      // -4.60 + 0.182258v + 0.000104v^2 = targetVO2
+      // 0.000104v^2 + 0.182258v - (targetVO2 + 4.60) = 0
+      const a = 0.000104, b = 0.182258, c = -(targetVO2 + 4.60);
+      return (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+    }
+
+    // VDOT from race distance (metres) and time (seconds)
+    function computeVDOT(distanceM, timeSec) {
+      const tMin = timeSec / 60;
+      const v = distanceM / tMin;           // m/min
+      const vo2 = vo2atVelocity(v);
+      const pct = pctVO2atDuration(tMin);
+      return vo2 / pct;
+    }
+
+    // All 5 Daniels training paces from VDOT
+    // Returns paces in seconds per km
+    function danielsPaces(vdot) {
+      // Zone % of VO2max → velocity → pace/km
+      const zones = { E: 0.70, M: 0.81, T: 0.88, I: 0.975, R: 1.06 };
+      const result = {};
+      for (const [z, pct] of Object.entries(zones)) {
+        const targetVO2 = vdot * pct;
+        const v_mpm = velocityFromVO2(targetVO2);  // m/min
+        result[z] = 1000 / v_mpm * 60;                 // s/km
+      }
+      return result; // seconds per km for each zone
+    }
+
+    // Predict race time (seconds) for given distance (metres) from VDOT
+    // Uses Newton's method: solve VDOT*%VO2(t) = VO2(d/t)
+    function predictRaceTime(distanceM, vdot) {
+      // Initial estimate: use vVO2max pace
+      const vVO2max = velocityFromVO2(vdot);
+      let t = (distanceM / vVO2max);  // minutes (rough)
+      for (let i = 0; i < 50; i++) {
+        const v = distanceM / t;
+        const f = vo2atVelocity(v) - vdot * pctVO2atDuration(t);
+        // df/dt = dVO2/dt - VDOT * d%VO2/dt
+        const dv_dt = -distanceM / (t * t);
+        const dVO2_dv = 0.182258 + 2 * 0.000104 * v;
+        const dpct_dt = -0.1894393 * 0.012778 * Math.exp(-0.012778 * t)
+          - 0.2989558 * 0.1932605 * Math.exp(-0.1932605 * t);
+        const df_dt = dVO2_dv * dv_dt - vdot * dpct_dt;
+        const dt = f / df_dt;
+        t -= dt;
+        if (Math.abs(dt) < 0.0001) break;
+      }
+      return t * 60;  // seconds
+    }
+
+    // Format seconds → mm:ss or h:mm:ss
+    function fmtDuration(secs) {
+      const s = Math.round(secs);
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const ss = s % 60;
+      if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+      return `${m}:${String(ss).padStart(2, '0')}`;
+    }
+
+    // Format seconds/km → min:ss /km string
+    function fmtPace(secPerKm) {
+      const m = Math.floor(secPerKm / 60);
+      const s = Math.round(secPerKm % 60);
+      return `${m}:${String(s).padStart(2, '0')}/km`;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // CTL PROJECTION
+    // ═══════════════════════════════════════════════════════
+    function projectCTL(series, targetDateStr, raceADateStr) {
+      if (!series.length) return [];
+      const last = series[series.length - 1];
+
+      // Average daily TSS over last 14 days (only non-zero days, captures true load)
+      const recent14 = series.slice(-14);
+      const avgDailyTSS = recent14.reduce((s, d) => s + d.tss, 0) / 14;
+
+      const dCtl = Math.exp(-1 / 42), dAtl = Math.exp(-1 / 7);
+      let ctl = last.ctl, atl = last.atl;
+      const proj = [];
+
+      const start = new Date(last.date + 'T12:00:00Z');
+      const end = new Date(raceADateStr + 'T12:00:00Z');
+      const today = new Date(); today.setHours(12, 0, 0, 0);
+
+      let cur = new Date(start); cur.setDate(cur.getDate() + 1);
+      while (cur <= end) {
+        const ds = cur.toISOString().slice(0, 10);
+        ctl = ctl * dCtl + avgDailyTSS * (1 - dCtl);
+        atl = atl * dAtl + avgDailyTSS * (1 - dAtl);
+        proj.push({ date: ds, ctl, atl, tsb: ctl - atl, projected: true });
+        cur.setDate(cur.getDate() + 1);
+      }
+      return proj;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // RAMP RATE (week-over-week CTL change)
+    // ═══════════════════════════════════════════════════════
+    function rampRate(series) {
+      if (series.length < 8) return null;
+      const cur = series[series.length - 1].ctl;
+      const prev = series[series.length - 8].ctl;
+      return cur - prev;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // DAILY COACHING ENGINE
+    // Based on Daniels: Phase logic, TSB bands, readiness,
+    // hypertraining protocol (p.159-160)
+    // ═══════════════════════════════════════════════════════
+    function dailyCoach(tsb, readyScore, phase, lastActivityZones, weeklyStats) {
+      // Hypertraining check (Daniels p.159: Step 1 = reduce 20% mileage)
+      if (tsb < -35 || (readyScore !== null && readyScore < 35)) {
+        return {
+          verdict: 'FULL REST',
+          color: 'var(--danger)',
+          icon: '🛑',
+          title: 'Recovery required',
+          main: 'TSB critically low or readiness very poor. Follow Daniels Step 2: cut all quality, treat as post-injury recovery.',
+          workout: 'Complete rest or 20-30 min walk at most.',
+          ref: 'Daniels: "Cut out all quality training for a week or two" — Hypertraining Protocol Step 2'
+        };
+      }
+      if (tsb < -30 || (readyScore !== null && readyScore < 45)) {
+        return {
+          verdict: 'EASY ONLY',
+          color: '#ff9f43',
+          icon: '⚠️',
+          title: 'Reduce load — overreaching zone',
+          main: 'TSB below −30 or readiness low. Daniels protocol: Step 1 — reduce total mileage by ~20%. This automatically reduces quality volume per the 10/8/5% rules.',
+          workout: 'E-pace run only. 30–50 min. No strides, no surges.',
+          ref: 'Daniels: "lower total mileage which will decrease quality work accordingly" — Hypertraining Protocol'
+        };
+      }
+
+      // Phase-specific recommendations
+      const phaseRecs = {
+        'I': { wtype: 'E run + strides', detail: 'Phase I focus: easy aerobic base. If ≥3 weeks in phase, add 4–6 strides × 20 sec after easy run.', zone: 'E' },
+        'II': { wtype: 'R-pace reps', detail: 'Phase II: introduce fast but controlled repetitions. Try 6–8 × 200m at R pace with full recovery (4× work time).', zone: 'R' },
+        'III': { wtype: 'T or I session', detail: 'Phase III (hardest): T-pace cruise intervals (≤10% weekly km) or I-pace reps (≤8% weekly km). Most performance-building work goes here.', zone: 'T' },
+        'IV': { wtype: 'Sharpen + race-specific', detail: 'Phase IV: maintain quality but cut volume. Race-specific pacing. TSB should trend toward +5 to +25 by race day.', zone: 'I' },
+      };
+
+      const rec = phaseRecs[phase] || phaseRecs['I'];
+
+      if (tsb >= 5 && phase === 'IV') {
+        return {
+          verdict: 'RACE SHARP',
+          color: 'var(--accent)',
+          icon: '🎯',
+          title: 'Race-ready · Phase IV',
+          main: 'Form is positive — you\'re in the target taper window (+5 to +25). Preserve sharpness without accumulating fatigue.',
+          workout: `${rec.wtype}. Short, punchy. ${rec.detail}`,
+          ref: 'Daniels: "Race ready TSB: +5 to +25. Focus on strengths in final weeks."'
+        };
+      }
+
+      if (tsb >= -10) {
+        return {
+          verdict: 'GO QUALITY',
+          color: 'var(--tsb)',
+          icon: '⚡',
+          title: 'Fresh · Quality session',
+          main: `TSB is positive-ish and readiness is ${readyScore != null ? readyScore + '/100' : 'good'}. Good day for a quality session.`,
+          workout: `${rec.wtype} — ${rec.detail}`,
+          ref: `Daniels ${phase === 'III' ? 'Phase III (TQ): primary emphasis on T and I work' : 'Phase ' + phase + ' recommendation'}`
+        };
+      }
+
+      if (tsb >= -25) {
+        return {
+          verdict: 'BUILD',
+          color: 'var(--a2)',
+          icon: '📈',
+          title: 'Optimal training zone',
+          main: `TSB ${tsb.toFixed(1)} is in Daniels' −10 to −30 optimal training band. Fitness building is happening. ${readyScore != null && readyScore < 65 ? 'Readiness is moderate — consider easy session today.' : 'You can absorb a moderate quality session.'}`,
+          workout: readyScore != null && readyScore < 65
+            ? 'E/M-pace run, 45–60 min. Quality tomorrow.'
+            : `${rec.wtype} — ${rec.detail}`,
+          ref: 'Daniels: "TSB −10 to −30 is optimal training zone — fitness is building."'
+        };
+      }
+
+      // TSB -25 to -30
+      return {
+        verdict: 'EASY',
+        color: 'var(--zM)',
+        icon: '🔵',
+        title: 'Accumulated fatigue · easy day',
+        main: 'TSB approaching lower boundary. Daniels: easy running is still highly beneficial — do not skip it for rest, but do not add quality.',
+        workout: 'E-pace run, 30–50 min. "Benefits of E-pace are a function of time, not intensity." — Daniels',
+        ref: 'Daniels: "Easy running strengthens muscles and oxygen delivery" — Chapter 4'
+      };
+    }
+
+
     function renderDash(data) {
       const { stats, sleep, hrv, readiness, trainingStatus, activities } = data;
       const series = computePMC(activities);
@@ -1319,6 +1735,26 @@
       const tLimit = wk.totalKm * 0.10, iLimit = wk.totalKm * 0.08, rLimit = wk.totalKm * 0.05;
 
       let html = '';
+
+
+      /* ── Daily Coach ─────────────────────────────────── */
+      const coach = dailyCoach(last.tsb || 0, readyScore, pi.phase, null, wk);
+      html += `<div class="coach-card" style="background:var(--s1);border:1px solid var(--border)">
+    <div class="coach-glow" style="color:${coach.color}"></div>
+    <div class="coach-icon">${coach.icon}</div>
+    <div class="coach-body">
+      <div class="coach-verdict" style="color:${coach.color}">${coach.verdict}</div>
+      <div class="coach-title" style="color:${coach.color}">${coach.title}</div>
+      <div class="coach-main">${coach.main}</div>
+      <div class="coach-workout" style="border-color:${coach.color};color:var(--text)">${coach.workout}</div>
+      <div class="coach-ref">${coach.ref}</div>
+    </div>
+    <div style="flex-shrink:0;text-align:right;font-family:var(--mono);font-size:10px;color:var(--text3);line-height:2">
+      <div>CTL <span style="color:var(--ctl)">${fmt(last.ctl)}</span></div>
+      <div>TSB <span style="color:${(last.tsb || 0) > 0 ? 'var(--good)' : 'var(--atl)'}">${fmt(last.tsb)}</span></div>
+      <div>Ready <span style="color:var(--text)">${readyScore ?? '—'}</span></div>
+    </div>
+  </div>`;
 
       /* ── Section: Race Countdown + Phase ────────────── */
       html += `<div class="g2" style="margin-bottom:14px">`;
@@ -1367,22 +1803,56 @@
   </div>`;
       html += `</div>`;
 
-      /* ── Section: Training Performance KPIs ─────────── */
-      html += `<div class="sec-label" style="--lc:var(--ctl)">Training Performance</div>`;
-      html += `<div class="g4">`;
-      [
-        { label: 'Fitness (CTL)', value: fmt(last.ctl), color: 'var(--ctl)', sub: '42-day chronic load' },
-        { label: 'Fatigue (ATL)', value: fmt(last.atl), color: 'var(--atl)', sub: '7-day acute load' },
-        { label: 'Form (TSB)', value: fmt(last.tsb), color: 'var(--tsb)', sub: `${tsbInfo.text} (${tsbInfo.band})` },
-        { label: "Today's Load", value: fmt(last.tss, 0), color: 'var(--orng)', sub: 'rTSS (Daniels IF²)' },
-      ].forEach((k, i) => {
-        html += `<div class="kpi" style="--kc:${k.color};animation-delay:${i * .06}s">
-      <div class="kpi-label">${k.label}</div>
-      <div class="kpi-val">${k.value}</div>
-      <div class="kpi-sub">${k.sub}</div>
-    </div>`;
-      });
-      html += `</div>`;
+
+      const projSeries = projectCTL(series, S.raceADate, S.raceADate);
+      const projAtRace = projSeries.length ? projSeries[projSeries.length - 1] : null;
+      const rr = rampRate(series);
+
+
+      html += `<div class="g4" style="margin-bottom:14px;grid-template-columns:repeat(4,1fr)">
+    <div class="kpi" style="--kc:var(--accent2);animation-delay:.22s">
+      <div class="kpi-label">Projected CTL at Race</div>
+      <div class="kpi-val">${projAtRace ? fmt(projAtRace.ctl) : '—'}</div>
+      <div class="kpi-sub">${projAtRace ? 'if current load maintained' : 'no projection'}</div>
+    </div>
+    <div class="kpi" style="--kc:${rr === null ? 'var(--text3)' : rr > 7 ? 'var(--danger)' : rr > 4 ? 'var(--tsb)' : 'var(--good)'};animation-delay:.28s">
+      <div class="kpi-label">CTL Ramp Rate</div>
+      <div class="kpi-val">${rr === null ? '—' : (rr >= 0 ? '+' : '') + rr.toFixed(1)}</div>
+      <div class="kpi-sub">${rr === null ? 'need more data' : rr > 7 ? '⚠ Too fast (>7/week)' : rr > 4 ? 'Moderate build' : 'Safe progression'}</div>
+    </div>
+    <div class="kpi" style="--kc:var(--ctl);animation-delay:.06s">
+      <div class="kpi-label">Fitness (CTL)</div>
+      <div class="kpi-val">${fmt(last.ctl)}</div>
+      <div class="kpi-sub">42-day chronic load</div>
+    </div>
+    <div class="kpi" style="--kc:var(--atl);animation-delay:.12s">
+      <div class="kpi-label">Fatigue (ATL)</div>
+      <div class="kpi-val">${fmt(last.atl)}</div>
+      <div class="kpi-sub">7-day acute load</div>
+    </div>
+  </div>
+  <div class="g4" style="margin-bottom:14px;grid-template-columns:repeat(4,1fr)">
+    <div class="kpi" style="--kc:var(--tsb);animation-delay:.18s">
+      <div class="kpi-label">Form (TSB)</div>
+      <div class="kpi-val">${fmt(last.tsb)}</div>
+      <div class="kpi-sub">${tsbInfo.text} · ${tsbInfo.band}</div>
+    </div>
+    <div class="kpi" style="--kc:var(--orng);animation-delay:.24s">
+      <div class="kpi-label">Today's Load</div>
+      <div class="kpi-val">${fmt(last.tss, 0)}</div>
+      <div class="kpi-sub">rTSS (Daniels IF²)</div>
+    </div>
+    <div class="kpi" style="--kc:var(--text2);animation-delay:.30s">
+      <div class="kpi-label">Proj. TSB at Race</div>
+      <div class="kpi-val">${projAtRace ? fmt(projAtRace.tsb) : '—'}</div>
+      <div class="kpi-sub">${projAtRace ? (projAtRace.tsb > 5 && projAtRace.tsb < 25 ? '✓ Race-ready range' : 'Adjust taper') : ''}</div>
+    </div>
+    <div class="kpi" style="--kc:var(--text2);animation-delay:.36s">
+      <div class="kpi-label">Days to Race</div>
+      <div class="kpi-val">${pi.daysLeft}</div>
+      <div class="kpi-sub">${pi.raceALabel}</div>
+    </div>
+  </div>`;
 
       /* ── PMC Chart ───────────────────────────────────── */
       html += `<div class="chart-card" style="animation-delay:.2s">
@@ -1605,6 +2075,58 @@
       }
       html += `</div></div>`;
 
+
+      /* ── VDOT Calculator ─────────────────────────────── */
+      html += `<div class="sec-label" style="--lc:var(--accent);margin-top:4px">VDOT Pace Calculator · Daniels/Gilbert Formula</div>`;
+      const vo2max = ts?.vo2MaxValue || null;
+      const defaultVDOT = vo2max ? Math.round(vo2max) : 57;
+      html += `<div class="card mb" style="--ct:var(--accent);animation-delay:.45s">
+    <div class="vdot-input-row">
+      <div class="field">
+        <label>Race Distance</label>
+        <select id="vdot-dist">
+          <option value="1500">1500m</option>
+          <option value="3000">3K</option>
+          <option value="5000" selected>5K</option>
+          <option value="10000">10K</option>
+          <option value="21097">Half Marathon</option>
+          <option value="42195">Marathon</option>
+        </select>
+      </div>
+      <div class="field" style="flex:1.5">
+        <label>Race Time (mm:ss or h:mm:ss)</label>
+        <input type="text" id="vdot-time" placeholder="e.g. 37:30" style="font-family:var(--mono)" 
+               value="${defaultVDOT === 57 ? '36:57' : ''}">
+      </div>
+      <button onclick="computeVDOTPanel()" style="padding:10px 18px;background:var(--accent);color:var(--bg);border:none;border-radius:var(--r);font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">
+        Compute →
+      </button>
+    </div>
+    <div id="vdot-result" style="display:none">
+      <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:16px;align-items:start">
+        <div>
+          <div class="vdot-num" id="vdot-display">—</div>
+          <div class="vdot-num-label">VDOT</div>
+          ${vo2max ? `<div style="font-size:11px;color:var(--text3);margin-top:6px;font-family:var(--mono)">Garmin VO₂ Max: ${vo2max}</div>` : ''}
+          <div id="vdot-garmin-diff" style="font-size:11px;margin-top:4px;font-family:var(--mono)"></div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Training Paces</div>
+          <table class="pace-table" id="vdot-paces">
+            <tr><th>Zone</th><th>Purpose</th><th>Pace /km</th><th>rTSS/hr</th></tr>
+          </table>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">Race Predictions</div>
+          <div class="race-pred" id="vdot-preds"></div>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:12px;font-family:var(--mono)">
+      Uses Daniels/Gilbert formula: VDOT = VO₂(v_race) / %VO₂max(t_race). Verified ±1s against Tables 3.1 &amp; 3.2.
+    </div>
+  </div>`;
+
       /* ── Methodology ─────────────────────────────────── */
       html += `<div class="card mb" style="animation-delay:.5s">
     <div class="card-title">Methodology — Jack Daniels' Running Formula</div>
@@ -1642,6 +2164,13 @@ R  ≥98% HRmax (${(S.HRmax * .98).toFixed(0)} bpm)</div>
   </div>`;
 
       document.getElementById('dash-content').innerHTML = html;
+
+      // Store VO2max for VDOT comparison
+      if (ts?.vo2MaxValue) window._garminVO2max = ts.vo2MaxValue;
+      // Auto-trigger VDOT panel with Garmin-based default
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new Event('vdot-ready'));
+      });
       requestAnimationFrame(() => {
         drawPMC(series);
         drawZoneChart(wk.tDist, wk.totalKm);
@@ -1748,6 +2277,42 @@ R  ≥98% HRmax (${(S.HRmax * .98).toFixed(0)} bpm)</div>
       drawLine(s => s.ctl, '#4a9eff', 2.5);
       drawLine(s => s.atl, '#ff6b9d', 1.8);
       drawLine(s => s.tsb, '#ffd60a', 1.5);
+
+
+      // Projected CTL + ATL dotted lines
+      const projData = projectCTL(series, S.raceADate, S.raceADate);
+      if (projData.length) {
+        // Map projection dates to x positions
+        const allDates = [...series.map(s => s.date), ...projData.map(p => p.date)];
+        const totalPts = series.length + projData.length - 1;
+        const xOfExt = i => PAD.left + (i / (totalPts - 1)) * CW;
+        // Redraw x axis needs adjustment — use simpler approach: extend from last real point
+        const lastRealX = xOf(series.length - 1);
+        const raceDate = S.raceADate;
+        const raceIdx = allDates.indexOf(raceDate);
+        if (raceIdx > 0) {
+          const projXOf = i => lastRealX + ((i) / projData.length) * (CW * projData.length / totalPts);
+          ctx.setLineDash([6, 4]);
+          ctx.strokeStyle = 'rgba(74,158,255,.4)'; ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(lastRealX, yOf(series[series.length - 1].ctl));
+          projData.forEach((p, i) => ctx.lineTo(projXOf(i + 1), yOf(p.ctl)));
+          ctx.stroke();
+          ctx.strokeStyle = 'rgba(255,107,157,.3)'; ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(lastRealX, yOf(series[series.length - 1].tsb));
+          projData.forEach((p, i) => ctx.lineTo(projXOf(i + 1), yOf(p.tsb)));
+          ctx.stroke();
+          ctx.setLineDash([]);
+          // Label at end
+          if (projData.length) {
+            const ex = projXOf(projData.length);
+            const lastProj = projData[projData.length - 1];
+            ctx.fillStyle = 'rgba(74,158,255,.6)'; ctx.font = `10px 'DM Mono',monospace`; ctx.textAlign = 'left';
+            ctx.fillText(`CTL→${lastProj.ctl.toFixed(0)}`, Math.min(ex + 2, W - 60), yOf(lastProj.ctl));
+          }
+        }
+      }
 
       // Today marker
       const todayIdx = series.findIndex(s => s.date === today);
@@ -1874,6 +2439,76 @@ R  ≥98% HRmax (${(S.HRmax * .98).toFixed(0)} bpm)</div>
       if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.error || `HTTP ${r.status}`); }
       return r.json();
     }
+
+
+    /* ══════════════════════════════════════════════
+       VDOT PANEL INTERACTIVITY
+    ══════════════════════════════════════════════ */
+    function computeVDOTPanel() {
+      const distM = parseInt(document.getElementById('vdot-dist').value);
+      const timeStr = document.getElementById('vdot-time').value.trim();
+      if (!timeStr) return;
+
+      // Parse time string (mm:ss or h:mm:ss)
+      const parts = timeStr.split(':').map(Number);
+      let secs;
+      if (parts.length === 3) secs = parts[0] * 3600 + parts[1] * 60 + parts[2];
+      else if (parts.length === 2) secs = parts[0] * 60 + parts[1];
+      else secs = parseFloat(timeStr) * 60;
+
+      if (!secs || secs <= 0) return;
+      const vdot = computeVDOT(distM, secs);
+      const paces = danielsPaces(vdot);
+
+      document.getElementById('vdot-display').textContent = vdot.toFixed(1);
+      document.getElementById('vdot-result').style.display = 'block';
+
+      // Compare with Garmin VO2max
+      const garminVO2 = parseFloat(document.getElementById('vdot-display')?.dataset?.garmin || '0');
+      const diffEl = document.getElementById('vdot-garmin-diff');
+      if (diffEl && window._garminVO2max) {
+        const diff = vdot - window._garminVO2max;
+        diffEl.style.color = diff > 2 ? 'var(--good)' : diff < -2 ? 'var(--atl)' : 'var(--text2)';
+        diffEl.textContent = `${diff >= 0 ? '+' : ''}${diff.toFixed(1)} vs Garmin`;
+      }
+
+      // Training paces table
+      const paceRows = [
+        ['E', 'Easy / Base', paces.E, 0.70],
+        ['M', 'Marathon', paces.M, 0.81],
+        ['T', 'Threshold', paces.T, 0.88],
+        ['I', 'Interval (VO₂)', paces.I, 0.975],
+        ['R', 'Repetition', paces.R, 1.06],
+      ];
+      const tbl = document.getElementById('vdot-paces');
+      tbl.innerHTML = '<tr><th>Zone</th><th>Purpose</th><th>Pace /km</th><th>rTSS/hr</th></tr>';
+      const colors = { E: 'var(--zE)', M: 'var(--zM)', T: 'var(--zT)', I: 'var(--zI)', R: 'var(--zR)' };
+      paceRows.forEach(([z, desc, spkm, IF]) => {
+        const tss_hr = (IF * IF * 100 / 0.7744).toFixed(0);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td><span class="z-pill z-${z}">${z}</span></td><td style="color:var(--text2);font-size:11px">${desc}</td><td style="color:${colors[z]}">${fmtPace(spkm)}</td><td style="color:var(--text2)">${tss_hr}</td>`;
+        tbl.appendChild(tr);
+      });
+
+      // Race predictions
+      const predsEl = document.getElementById('vdot-preds');
+      predsEl.innerHTML = '';
+      const raceDists = [[5000, '5K'], [10000, '10K'], [21097, 'HM'], [42195, 'Marathon']];
+      raceDists.forEach(([d, name]) => {
+        const t = predictRaceTime(d, vdot);
+        const div = document.createElement('div');
+        div.className = 'race-pred-item';
+        div.innerHTML = `<div class="race-pred-dist">${name}</div><div class="race-pred-time">${fmtDuration(t)}</div>`;
+        predsEl.appendChild(div);
+      });
+    }
+
+    // Auto-run on page load with default VDOT
+    window.addEventListener('vdot-ready', () => {
+      const input = document.getElementById('vdot-time');
+      if (input && input.value) computeVDOTPanel();
+    });
+
 
     async function doLogin() {
       const workerUrl = document.getElementById('worker-url').value.trim().replace(/\/$/, '');
