@@ -40,6 +40,12 @@
       --zT: #ffd60a;
       --zI: #ff7b3d;
       --zR: #ff4d6d;
+      /* 5-zone HR model */
+      --hz1: #5eead4;
+      --hz2: #4ade80;
+      --hz3: #facc15;
+      --hz4: #f97316;
+      --hz5: #ef4444;
       --mono: 'DM Mono', monospace;
       --sans: 'Syne', sans-serif;
       --r: 6px;
@@ -714,6 +720,70 @@
       border: 1px solid rgba(255, 77, 109, .2);
     }
 
+    /* ─── HR ZONE DISTRIBUTION WIDGET ─ */
+    .hrz-stack {
+      display: flex;
+      height: 10px;
+      border-radius: 5px;
+      overflow: hidden;
+      gap: 2px;
+      margin-bottom: 16px;
+      background: var(--b2);
+    }
+    .hrz-seg {
+      border-radius: 2px;
+      transition: width .4s ease;
+    }
+    .hrz-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(255,255,255,.04);
+    }
+    .hrz-row:last-of-type { border-bottom: none; }
+    .hrz-label {
+      font-size: 10px;
+      font-weight: 700;
+      font-family: var(--mono);
+      min-width: 22px;
+    }
+    .hrz-desc {
+      flex: 1;
+      font-size: 11px;
+      color: var(--text2);
+    }
+    .hrz-range {
+      font-size: 10px;
+      color: var(--text3);
+      font-family: var(--mono);
+      min-width: 80px;
+      text-align: right;
+    }
+    .hrz-track {
+      width: 72px;
+      height: 4px;
+      background: var(--b2);
+      border-radius: 2px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .hrz-fill { height: 100%; border-radius: 2px; }
+    .hrz-time {
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--text2);
+      min-width: 34px;
+      text-align: right;
+    }
+    .hrz-pct {
+      font-size: 10px;
+      font-family: var(--mono);
+      color: var(--text3);
+      min-width: 30px;
+      text-align: right;
+    }
+
     /* ─── ACTIVITY ITEM ────────────── */
     .act-item {
       display: flex;
@@ -1339,6 +1409,22 @@
       return 'R';
     }
 
+    /* 5-zone HR model (Garmin/Polar standard, % of HRmax)
+       Z1 < 60%  Recovery
+       Z2 60–70% Aerobic Base
+       Z3 70–80% Tempo
+       Z4 80–90% Threshold
+       Z5 ≥ 90%  VO₂max */
+    function classifyZone5(avgHR) {
+      if (!avgHR || avgHR <= 0) return null;
+      const mx = S.HRmax;
+      if (avgHR < mx * 0.60) return 'Z1';
+      if (avgHR < mx * 0.70) return 'Z2';
+      if (avgHR < mx * 0.80) return 'Z3';
+      if (avgHR < mx * 0.90) return 'Z4';
+      return 'Z5';
+    }
+
     /* rTSS using Daniels' IF-based method
        rTSS = duration_h × IF² × 100
        (By definition: 1h at T pace = IF 0.88 → 77.4 TSS ≈ close to TrainingPeaks standard)
@@ -1412,16 +1498,20 @@
         });
 
       let totalKm = 0, tDist = { E: 0, M: 0, T: 0, I: 0, R: 0 }, tHours = 0;
+      let tHoursZ5 = { Z1: 0, Z2: 0, Z3: 0, Z4: 0, Z5: 0 };
       recent.forEach(a => {
         const dist = (a.distance || a.totalDistance || 0) / 1000;
         const dur = (a.duration || a.elapsedDuration || 0) / 3600;
-        const zone = classifyZone(a.averageHR || a.avgHr);
+        const hr = a.averageHR || a.avgHr;
+        const zone = classifyZone(hr);
+        const z5 = classifyZone5(hr);
         totalKm += dist;
         tHours += dur;
         if (zone) tDist[zone] += dist;
+        if (z5) tHoursZ5[z5] += dur;
       });
 
-      return { totalKm, tHours, tDist, recent };
+      return { totalKm, tHours, tDist, tHoursZ5, recent };
     }
 
     /* ══════════════════════════════════════════════
@@ -1922,6 +2012,63 @@
   </div>
   </div>`;
       html += `</div>`;
+
+      /* ── Section: HR Zone Distribution ─────────────── */
+      html += `<div class="sec-label" style="--lc:var(--hz4);margin-top:4px">HR Zone Distribution · 7 Days</div>`;
+      const Z5_DEFS = [
+        { key: 'Z1', desc: 'Recovery',    lo: 0,  hi: 60, col: 'var(--hz1)' },
+        { key: 'Z2', desc: 'Aerobic Base',lo: 60, hi: 70, col: 'var(--hz2)' },
+        { key: 'Z3', desc: 'Tempo',       lo: 70, hi: 80, col: 'var(--hz3)' },
+        { key: 'Z4', desc: 'Threshold',   lo: 80, hi: 90, col: 'var(--hz4)' },
+        { key: 'Z5', desc: 'VO₂max',      lo: 90, hi: 100, col: 'var(--hz5)' },
+      ];
+      const totalHrz = Z5_DEFS.reduce((s, z) => s + (wk.tHoursZ5[z.key] || 0), 0);
+      html += `<div class="card" style="--ct:var(--hz4)">
+  <div class="card-title">Time in Zone · 5-Zone HR Model</div>`;
+      if (totalHrz > 0) {
+        // Stacked proportion bar
+        html += `<div class="hrz-stack">
+    ${Z5_DEFS.map(z => {
+      const pct = (wk.tHoursZ5[z.key] || 0) / totalHrz * 100;
+      return pct > 0.5 ? `<div class="hrz-seg" style="width:${pct.toFixed(1)}%;background:${z.col}" title="${z.key} ${pct.toFixed(0)}%"></div>` : '';
+    }).join('')}
+  </div>`;
+        // Per-zone rows
+        Z5_DEFS.forEach(z => {
+          const hrs = wk.tHoursZ5[z.key] || 0;
+          const pct = hrs / totalHrz * 100;
+          const loHR = z.lo === 0 ? `< ${Math.round(S.HRmax * 0.60)}` : `${Math.round(S.HRmax * z.lo / 100)}–${Math.round(S.HRmax * z.hi / 100)}`;
+          const hiLabel = z.hi === 100 ? `≥ ${Math.round(S.HRmax * 0.90)}` : null;
+          const rangeStr = hiLabel || `${loHR} bpm`;
+          html += `<div class="hrz-row">
+    <div class="hrz-label" style="color:${z.col}">${z.key}</div>
+    <div class="hrz-desc">${z.desc}</div>
+    <div class="hrz-range">${rangeStr} bpm</div>
+    <div class="hrz-track"><div class="hrz-fill" style="width:${pct.toFixed(1)}%;background:${z.col}"></div></div>
+    <div class="hrz-time">${hrs > 0 ? hrs.toFixed(1) + 'h' : '—'}</div>
+    <div class="hrz-pct">${pct > 0.5 ? pct.toFixed(0) + '%' : ''}</div>
+  </div>`;
+        });
+        // Polarisation footer
+        const easyPct = ((wk.tHoursZ5.Z1 || 0) + (wk.tHoursZ5.Z2 || 0)) / totalHrz * 100;
+        const qualPct = 100 - easyPct;
+        const piStatus = Math.abs(easyPct - 80) <= 10
+          ? `<span class="z-pill" style="background:rgba(74,255,180,.1);color:var(--good);border-color:rgba(74,255,180,.2);margin-left:auto">✓ 80/20</span>`
+          : easyPct < 70
+          ? `<span class="z-pill" style="background:rgba(255,77,109,.1);color:var(--danger);border-color:rgba(255,77,109,.2);margin-left:auto">⚠ Too intense</span>`
+          : `<span class="z-pill" style="background:rgba(255,214,10,.1);color:var(--tsb);border-color:rgba(255,214,10,.2);margin-left:auto">~ OK</span>`;
+        html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:11px">
+    <span style="color:var(--text3)">Polarisation</span>
+    <span style="color:var(--hz2);font-family:var(--mono)">${easyPct.toFixed(0)}% easy</span>
+    <span style="color:var(--text3)">·</span>
+    <span style="color:var(--hz4);font-family:var(--mono)">${qualPct.toFixed(0)}% quality</span>
+    ${piStatus}
+  </div>`;
+      } else {
+        html += `<div style="color:var(--text3);font-size:12px;padding:12px 0">No activity data for the last 7 days.</div>`;
+      }
+      html += `<div style="margin-top:10px;font-size:10px;color:var(--text3)">HRmax ${S.HRmax} bpm · Z1 &lt;60% · Z2 60–70% · Z3 70–80% · Z4 80–90% · Z5 ≥90% · Polarisation: Seiler (2010)</div>
+</div>`;
 
       /* ── Section: Training Status + Readiness ─────── */
       html += `<div class="g2">`;
