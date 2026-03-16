@@ -327,11 +327,18 @@ export default {
         return jsonResponse(result);
       }
 
-      if (url.pathname === '/data' && request.method === 'POST') {
-        const body = await request.json();
-        const token = body.token;
-        const date = body.date || new Date().toLocaleDateString('en-CA'); // local date fallback
-        const displayName = body.displayName || '';
+      if (url.pathname === '/data' && (request.method === 'POST' || request.method === 'GET')) {
+        let token, date, displayName;
+        if (request.method === 'GET') {
+          token = url.searchParams.get('token');
+          date = url.searchParams.get('date') || new Date().toLocaleDateString('en-CA');
+          displayName = url.searchParams.get('displayName') || '';
+        } else {
+          const body = await request.json();
+          token = body.token;
+          date = body.date || new Date().toLocaleDateString('en-CA');
+          displayName = body.displayName || '';
+        }
         if (!token) return jsonResponse({ error: 'token required' }, { status: 401 });
         const data = await fetchAllData(token, date, displayName);
         return jsonResponse(data);
