@@ -1549,7 +1549,7 @@
     function tsbLabel(v) {
       if (v > 25) return { text: 'Overtapered', cls: 'warn', band: '> +25' };
       if (v > 5) return { text: 'Race Ready', cls: 'good', band: '+5 to +25' };
-      if (v > -10) return { text: 'Fresh', cls: 'blue', band: '0 to -10' };
+      if (v > -10) return { text: 'Neutral', cls: 'blue', band: '0 to -10' };
       if (v > -30) return { text: 'Optimal Training', cls: 'blue', band: '-10 to -30' };
       return { text: 'Overreaching Risk', cls: 'bad', band: '< -30' };
     }
@@ -1696,6 +1696,51 @@
     }
 
     // ═══════════════════════════════════════════════════════
+    // ACWR — Acute:Chronic Workload Ratio (Gabbett 2016)
+    // 7-day rolling avg / 28-day rolling avg of daily TSS
+    // Sweet spot: 0.8–1.3. Danger: > 1.5.
+    // ═══════════════════════════════════════════════════════
+    function computeACWR(series) {
+      if (series.length < 8) return null;
+      const slice28 = series.slice(-28);
+      const avg28 = slice28.reduce((s, d) => s + d.tss, 0) / slice28.length;
+      if (avg28 < 0.1) return null;
+      const avg7 = series.slice(-7).reduce((s, d) => s + d.tss, 0) / 7;
+      return avg7 / avg28;
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // SEILER TID — Session-goal intensity distribution
+    // Classifies sessions into Seiler's 3 physiological zones
+    // Z1 (easy/sub-LT1):      Daniels E  — avg HR < 75% HRmax
+    // Z2 (threshold/LT1→LT2): Daniels M+T — avg HR 75–90% HRmax
+    // Z3 (hard/supra-LT2):    Daniels I+R — avg HR ≥ 90% HRmax
+    // Source: Seiler 2010, Stöggl & Sperlich 2014
+    // ═══════════════════════════════════════════════════════
+    function seilerTID(activities, days = 28) {
+      const today = new Date(); today.setHours(23, 59, 59, 0);
+      const cutoff = new Date(today); cutoff.setDate(cutoff.getDate() - days);
+      let z1 = 0, z2 = 0, z3 = 0;
+      (Array.isArray(activities) ? activities : []).forEach(a => {
+        const d = new Date(a.startTimeLocal || a.beginTimestamp);
+        if (d < cutoff || d > today) return;
+        const hr = a.averageHR || a.avgHr;
+        if (!hr) return;
+        const zone = classifyZone(hr);
+        if (zone === 'E') z1++;
+        else if (zone === 'M' || zone === 'T') z2++;
+        else z3++;
+      });
+      const total = z1 + z2 + z3;
+      return {
+        z1, z2, z3, total,
+        z1Pct: total > 0 ? z1 / total * 100 : 0,
+        z2Pct: total > 0 ? z2 / total * 100 : 0,
+        z3Pct: total > 0 ? z3 / total * 100 : 0,
+      };
+    }
+
+    // ═══════════════════════════════════════════════════════
     // DAILY COACHING ENGINE
     // Based on Daniels: Phase logic, TSB bands, readiness,
     // hypertraining protocol (p.159-160)
@@ -1823,6 +1868,13 @@
       // Zone compliance (Daniels: T≤10%, I≤8%, R≤5% of weekly km)
       const wTKm = wk.tDist.T, wIKm = wk.tDist.I, wRKm = wk.tDist.R;
       const tLimit = wk.totalKm * 0.10, iLimit = wk.totalKm * 0.08, rLimit = wk.totalKm * 0.05;
+
+      const acwr = computeACWR(series);
+      const stid = seilerTID(activities);
+      const rhrAlert = s.restingHeartRate && s.lastSevenDaysAvgRestingHeartRate &&
+        (s.restingHeartRate - s.lastSevenDaysAvgRestingHeartRate >= 5);
+      const slpAlert = slpH != null && slpH < 6.5;
+      const vo2maxMinutes = ((wk.tDist.I || 0) + (wk.tDist.R || 0)) * 60;
 
       let html = '';
 
@@ -2009,7 +2061,18 @@
       html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);line-height:1.7">
     Rules from <em>Daniels' Running Formula</em>: T ≤ 10%, I ≤ 8%, R ≤ 5% of weekly km.
     Zones classified by HR: E &lt;${(S.HRmax * .75).toFixed(0)} · M &lt;${(S.HRmax * .82).toFixed(0)} · T &lt;${(S.HRmax * .90).toFixed(0)} · I &lt;${(S.HRmax * .98).toFixed(0)} · R ≥${(S.HRmax * .98).toFixed(0)} bpm
+  </div>`;
+
+      // Time-at-VO2max (Billat §3)
+      const vo2Cls = pi.phase === 'I' ? '' : vo2maxMinutes >= 15 && vo2maxMinutes <= 30 ? 'good' : vo2maxMinutes > 30 ? 'warn' : vo2maxMinutes > 0 ? '' : 'bad';
+      const vo2Note = pi.phase === 'I' ? 'not prescribed in Phase I' : vo2maxMinutes >= 15 && vo2maxMinutes <= 30 ? '✓ on target (15–30 min)' : vo2maxMinutes > 30 ? 'monitor — above 30 min ceiling' : 'below 15 min target';
+      html += `<div style="margin-top:10px;padding:8px 12px;background:var(--s2);border-radius:4px;border:1px solid var(--border)">
+  <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px">
+    <span style="color:var(--text2)">Time at VO₂max (I+R zones) · this week</span>
+    <span class="mv ${vo2Cls}" style="font-family:var(--mono)">${vo2maxMinutes.toFixed(0)} min · ${vo2Note}</span>
   </div>
+  <div style="font-size:10px;color:var(--text3);margin-top:3px">Billat (2000): 15–30 min/wk at vVO₂max is optimal VO₂max stimulus. Estimated from I+R zone session hours.</div>
+</div>
   </div>`;
       html += `</div>`;
 
@@ -2067,8 +2130,28 @@
       } else {
         html += `<div style="color:var(--text3);font-size:12px;padding:12px 0">No activity data for the last 7 days.</div>`;
       }
-      html += `<div style="margin-top:10px;font-size:10px;color:var(--text3)">HRmax ${S.HRmax} bpm · Z1 &lt;60% · Z2 60–70% · Z3 70–80% · Z4 80–90% · Z5 ≥90% · Polarisation: Seiler (2010)</div>
+      html += `<div style="margin-top:10px;font-size:10px;color:var(--text3)">HRmax ${S.HRmax} bpm · Z1 &lt;60% · Z2 60–70% · Z3 70–80% · Z4 80–90% · Z5 ≥90% · Polarisation: Seiler (2010)</div>`;
+
+      // Seiler 3-zone TID panel (session-goal, last 28 days)
+      if (stid.total > 0) {
+        const stidBad = stid.z2Pct > 25;
+        html += `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border)">
+  <div style="font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">Seiler 3-Zone TID · Last 28 Days · ${stid.total} sessions</div>
+  <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px;margin-bottom:8px">
+    <div style="flex:${Math.max(stid.z1Pct, 0.5)};background:var(--hz2)" title="Easy ${stid.z1Pct.toFixed(0)}%"></div>
+    <div style="flex:${Math.max(stid.z2Pct, 0.5)};background:var(--hz3)" title="Threshold ${stid.z2Pct.toFixed(0)}%"></div>
+    <div style="flex:${Math.max(stid.z3Pct, 0.5)};background:var(--hz5)" title="Hard ${stid.z3Pct.toFixed(0)}%"></div>
+  </div>
+  <div style="display:flex;gap:16px;font-size:11px;font-family:var(--mono);flex-wrap:wrap">
+    <span style="color:var(--hz2)">Z1 Easy: ${stid.z1} sess (${stid.z1Pct.toFixed(0)}%)</span>
+    <span style="color:${stidBad ? 'var(--danger)' : 'var(--hz3)'}">Z2 Threshold: ${stid.z2} sess (${stid.z2Pct.toFixed(0)}%)${stidBad ? ' ⚠' : ''}</span>
+    <span style="color:var(--hz5)">Z3 Hard: ${stid.z3} sess (${stid.z3Pct.toFixed(0)}%)</span>
+  </div>
+  ${stidBad ? `<div style="margin-top:6px;font-size:11px;color:var(--danger)">⚠ Threshold-heavy (&gt;25% Z2 sessions) — plateau risk. Shift sessions toward polarized: more Z3 hard, less Z2 tempo. (Stöggl &amp; Sperlich 2014)</div>` : ''}
+  <div style="margin-top:6px;font-size:10px;color:var(--text3)">Seiler (2010): elite athletes ~80% easy, ~15–20% hard, ≤5% threshold. Athlete Z1=easy (&lt;75% HRmax), Z2=threshold (75–90%), Z3=hard (≥90%).</div>
 </div>`;
+      }
+      html += `</div>`;
 
       /* ── Section: Training Status + Readiness ─────── */
       html += `<div class="g2">`;
@@ -2111,7 +2194,11 @@
     <div class="mr"><span class="ml">Fatigue ATL</span><span class="mv" style="color:var(--atl)">${fmt(last.atl)}</span></div>
     <div class="mr"><span class="ml">Form TSB</span><span class="mv ${tsbInfo.cls}">${fmt(last.tsb)} · ${tsbInfo.text}</span></div>
     ${ts?.vo2MaxValue ? `<div class="mr"><span class="ml">VO₂ Max</span><span class="mv blue">${ts.vo2MaxValue} ml/kg/min</span></div>` : ''}
-    ${ts?.acwrStatus ? `<div class="mr"><span class="ml">ACWR</span><span class="mv good">${ts.acwrStatus.replace(/_/g, ' ')}</span></div>` : ''}
+    ${acwr !== null ? (() => {
+      const acwrCls = acwr > 1.5 ? 'bad' : acwr > 1.3 ? 'warn' : acwr < 0.8 ? 'warn' : 'good';
+      const acwrNote = acwr > 1.5 ? ' ⚠ spike risk' : acwr > 1.3 ? ' monitor' : acwr < 0.8 ? ' undertraining' : ' ✓ safe';
+      return `<div class="mr"><span class="ml">ACWR (7/28d)</span><span class="mv ${acwrCls}">${acwr.toFixed(2)}${acwrNote}</span></div>`;
+    })() : ''}
     <div class="mr"><span class="ml">Phase goal TSB</span><span class="mv" style="color:var(--tsb)">${pi.phase === 'IV' ? '+5 to +25' : '-10 to -30'}</span></div>
   </div>`;
       html += `</div>`;
@@ -2124,7 +2211,8 @@
       html += `<div class="card" style="--ct:var(--a2)">
     <div class="card-title">Sleep</div>
     <div style="font-family:var(--mono);font-size:48px;font-weight:500;line-height:1;color:var(--a2)">${slpH != null ? slpH.toFixed(1) : '—'}<span style="font-size:16px;color:var(--text3)"> h</span></div>
-    <div style="font-size:12px;color:var(--text2);margin-top:4px">${slpQ.replace(/_/g, ' ')}${slpScore ? ` · Score ${slpScore}` : ''}</div>`;
+    <div style="font-size:12px;color:var(--text2);margin-top:4px">${slpQ.replace(/_/g, ' ')}${slpScore ? ` · Score ${slpScore}` : ''}</div>
+    ${slpAlert ? `<div style="margin-top:8px;padding:6px 10px;background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.25);border-radius:4px;font-size:11px;color:var(--tsb)">⚠ ${slpH.toFixed(1)}h &lt; 6.5h — reduce intensity (KB §10.3)</div>` : ''}`;
       if (deepP != null) {
         html += `<div class="sleep-bar" style="margin-top:12px">
       <div style="flex:${deepP};background:#4361ee"></div>
@@ -2170,6 +2258,7 @@
     <div class="mr"><span class="ml">HR range today</span><span class="mv">${s.minHeartRate ?? '—'}–${s.maxHeartRate ?? '—'} bpm</span></div>
     <div class="mr"><span class="ml">Respiration avg</span><span class="mv">${s.averageWakingRespirationValue ?? '—'} br/m</span></div>
     <div class="mr"><span class="ml">HRV overnight</span><span class="mv good">${hrvAvg ? fmt(hrvAvg, 0) + ' ms' : '—'}</span></div>
+    ${rhrAlert ? `<div style="margin-top:8px;padding:6px 10px;background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.25);border-radius:4px;font-size:11px;color:var(--tsb)">⚠ RHR +${(s.restingHeartRate - s.lastSevenDaysAvgRestingHeartRate).toFixed(0)} bpm above 7d avg — consider rest or Z1 only (KB §10.4)</div>` : ''}
   </div>`;
       html += `</div>`;
 
@@ -2276,8 +2365,8 @@
 
       /* ── Methodology ─────────────────────────────────── */
       html += `<div class="card mb" style="animation-delay:.5s">
-    <div class="card-title">Methodology — Jack Daniels' Running Formula</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:4px">
+    <div class="card-title">Methodology — Jack Daniels · Seiler · Banister · Gabbett</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;margin-top:4px">
       <div>
         <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">rTSS (Daniels IF²)</div>
         <div style="font-size:12px;color:var(--text2);line-height:1.6">Intensity Factor per zone, normalised to T pace (threshold = 100 TSS/hr). More accurate than TRIMP as it reflects the <em>purpose</em> of each zone.</div>
@@ -2287,15 +2376,15 @@ T: IF=0.88 · I: IF=0.975
 R: IF=1.05</div>
       </div>
       <div>
-        <div style="font-size:12px;font-weight:700;color:var(--ctl);margin-bottom:6px">CTL / ATL / TSB</div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6">Exponential moving averages of daily rTSS. TSB = CTL − ATL. Daniels: optimal training TSB −10 to −30; race ready +5 to +25.</div>
+        <div style="font-size:12px;font-weight:700;color:var(--ctl);margin-bottom:6px">CTL / ATL / TSB (Banister/Skiba)</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6">Exponential moving averages of daily rTSS. TSB = CTL − ATL. Optimal training: −10 to −30; race ready: +5 to +25.</div>
         <div class="formula">CTL_t = CTL_{t-1}×e^(-1/42)
        + rTSS_t×(1-e^(-1/42))
 ATL_t = ATL_{t-1}×e^(-1/7)
        + rTSS_t×(1-e^(-1/7))</div>
       </div>
       <div>
-        <div style="font-size:12px;font-weight:700;color:var(--zT);margin-bottom:6px">Zone Boundaries</div>
+        <div style="font-size:12px;font-weight:700;color:var(--zT);margin-bottom:6px">Zone Boundaries (Daniels)</div>
         <div style="font-size:12px;color:var(--text2);line-height:1.6">HR-based zone detection using Daniels' percentages of HRmax.</div>
         <div class="formula">E  &lt;75% HRmax (${(S.HRmax * .75).toFixed(0)} bpm)
 M  &lt;82% HRmax (${(S.HRmax * .82).toFixed(0)} bpm)
@@ -2303,11 +2392,22 @@ T  &lt;90% HRmax (${(S.HRmax * .90).toFixed(0)} bpm)
 I  &lt;98% HRmax (${(S.HRmax * .98).toFixed(0)} bpm)
 R  ≥98% HRmax (${(S.HRmax * .98).toFixed(0)} bpm)</div>
       </div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px">ACWR · Seiler TID (Gabbett/Seiler)</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6">ACWR: 7-day avg TSS / 28-day avg TSS. Sweet spot 0.8–1.3; &gt;1.5 = spike risk. TID: sessions classified by avg HR into Seiler's 3 physiological zones.</div>
+        <div class="formula">ACWR = avg7d_TSS / avg28d_TSS
+Safe: 0.8–1.3 · Danger: &gt;1.5
+
+Seiler-Z1 (easy):  &lt;75% HRmax
+Seiler-Z2 (tempo): 75–90% HRmax
+Seiler-Z3 (hard):  ≥90% HRmax
+Target: ~80% Z1 · ≤5% Z2 · ~15% Z3</div>
+      </div>
     </div>
   </div>`;
 
       html += `<div style="font-family:var(--mono);font-size:10px;color:var(--text3);text-align:center;padding:14px 0;border-top:1px solid var(--border)">
-    METHODOLOGY: DANIELS' RUNNING FORMULA · DATA: GARMIN CONNECT · rTSS APPROXIMATION — EXACT VALUES REQUIRE PACE ZONES
+    DANIELS' RUNNING FORMULA · SEILER (2010) TID · BANISTER/SKIBA IMPULSE-RESPONSE · GABBETT (2016) ACWR · BILLAT (2000) vVO₂max · DATA: GARMIN CONNECT
   </div>`;
 
       document.getElementById('dash-content').innerHTML = html;
