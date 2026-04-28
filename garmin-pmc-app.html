@@ -170,14 +170,8 @@
       gap: 10px;
     }
 
-    .login-logo::before {
-      content: '';
-      display: block;
-      width: 28px;
-      height: 28px;
-      background: conic-gradient(from 0deg, var(--accent), var(--a2), var(--atl), var(--accent));
-      border-radius: 50%;
-      animation: spin 8s linear infinite;
+    .login-logo svg {
+      flex-shrink: 0;
     }
 
     @keyframes spin {
@@ -358,8 +352,7 @@
     .topbar-logo {
       width: 28px;
       height: 28px;
-      border-radius: 50%;
-      background: conic-gradient(from 0deg, var(--accent), var(--a2), var(--atl), var(--accent));
+      flex-shrink: 0;
     }
 
     .topbar-title {
@@ -1132,9 +1125,12 @@
     }
 
     .coach-icon {
-      font-size: 28px;
+      width: 36px;
+      height: 36px;
       flex-shrink: 0;
-      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       margin-top: 2px;
     }
 
@@ -1322,7 +1318,10 @@
   <!-- ══════════════════ LOGIN SCREEN ══════════════════ -->
   <div id="login-screen" class="screen active">
     <div class="login-box">
-      <div class="login-logo">Garmin PMC · Daniels Method</div>
+      <div class="login-logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="5" fill="rgba(74,255,180,0.08)" stroke="rgba(74,255,180,0.2)" stroke-width="1"/><polyline points="3,18 7,11 11,15 16,6 21,9" stroke="#4affb4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="21" cy="9" r="2" fill="#4affb4"/></svg>
+        LUT PMC · Daniels / Seiler
+      </div>
       <div class="login-title">Your training,<br>decoded.</div>
       <div class="login-sub">Live Performance Management Chart with Jack Daniels' zone analysis, quality compliance
         tracking, and 4-phase season planning.</div>
@@ -1394,7 +1393,7 @@
   <div id="dash-screen" class="screen">
     <div class="topbar">
       <div class="topbar-left">
-        <div class="topbar-logo"></div>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" class="topbar-logo"><rect width="24" height="24" rx="5" fill="rgba(74,255,180,0.08)" stroke="rgba(74,255,180,0.2)" stroke-width="1"/><polyline points="3,18 7,11 11,15 16,6 21,9" stroke="#4affb4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="21" cy="9" r="2" fill="#4affb4"/></svg>
         <div>
           <div class="topbar-title">PMC Dashboard</div>
           <div class="topbar-user" id="topbar-user">—</div>
@@ -1652,9 +1651,29 @@
     const fmt = (v, d = 1) => v == null ? '—' : (+v).toFixed(d);
     const fmtKm = m => m ? (m / 1000).toFixed(2) + ' km' : '—';
     const fmtTime = s => { if (!s) return '—'; const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`; };
-    const actIcon = t => ({ running: '🏃', trail_running: '🏔️', cycling: '🚴', backcountry_skiing: '⛷️', hiking: '🥾', swimming: '🏊', strength_training: '🏋️', walking: '🚶' }[t] || '🏅');
     const dateLabel = s => new Date(s + 'T12:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
     const pct = (a, b) => b > 0 ? Math.min(100, a / b * 100).toFixed(0) : 0;
+
+    /* Activity type color badges */
+    const ACT_BADGE = {
+      running:           ['#4affb4', 'RUN'],
+      trail_running:     ['#ff7b3d', 'TRL'],
+      cycling:           ['#4a9eff', 'CYC'],
+      backcountry_skiing:['#a5f3fc', 'SKI'],
+      hiking:            ['#fbbf24', 'HIK'],
+      swimming:          ['#818cf8', 'SWM'],
+      strength_training: ['#f87171', 'STR'],
+      walking:           ['#86efac', 'WLK'],
+    };
+    const actBadge = t => ACT_BADGE[t] || ['#7a8299', 'ACT'];
+
+    /* Coach SVG icons — stroke="currentColor" inherits color from parent */
+    const ICON_STOP   = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`;
+    const ICON_WARN   = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+    const ICON_TARGET = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`;
+    const ICON_BOLT   = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
+    const ICON_TREND  = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`;
+    const ICON_CLOCK  = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
 
     /* ══════════════════════════════════════════════
        RENDER
@@ -1843,7 +1862,7 @@
         return {
           verdict: 'FULL REST',
           color: 'var(--danger)',
-          icon: '🛑',
+          icon: ICON_STOP,
           title: 'Recovery required',
           main: 'TSB critically low or readiness very poor. Follow Daniels Step 2: cut all quality, treat as post-injury recovery.',
           workout: 'Complete rest or 20-30 min walk at most.',
@@ -1854,7 +1873,7 @@
         return {
           verdict: 'EASY ONLY',
           color: '#ff9f43',
-          icon: '⚠️',
+          icon: ICON_WARN,
           title: 'Reduce load — overreaching zone',
           main: 'TSB below −30 or readiness low. Daniels protocol: Step 1 — reduce total mileage by ~20%. This automatically reduces quality volume per the 10/8/5% rules.',
           workout: 'E-pace run only. 30–50 min. No strides, no surges.',
@@ -1876,7 +1895,7 @@
         return {
           verdict: 'RACE SHARP',
           color: 'var(--accent)',
-          icon: '🎯',
+          icon: ICON_TARGET,
           title: 'Race-ready · Phase IV',
           main: 'Form is positive — you\'re in the target taper window (+5 to +25). Preserve sharpness without accumulating fatigue.',
           workout: `${rec.wtype}. Short, punchy. ${rec.detail}`,
@@ -1888,7 +1907,7 @@
         return {
           verdict: 'GO QUALITY',
           color: 'var(--tsb)',
-          icon: '⚡',
+          icon: ICON_BOLT,
           title: 'Fresh · Quality session',
           main: `TSB is positive-ish and readiness is ${readyScore != null ? readyScore + '/100' : 'good'}. Good day for a quality session.`,
           workout: `${rec.wtype} — ${rec.detail}`,
@@ -1900,7 +1919,7 @@
         return {
           verdict: 'BUILD',
           color: 'var(--a2)',
-          icon: '📈',
+          icon: ICON_TREND,
           title: 'Optimal training zone',
           main: `TSB ${tsb.toFixed(1)} is in Daniels' −10 to −30 optimal training band. Fitness building is happening. ${readyScore != null && readyScore < 65 ? 'Readiness is moderate — consider easy session today.' : 'You can absorb a moderate quality session.'}`,
           workout: readyScore != null && readyScore < 65
@@ -1914,7 +1933,7 @@
       return {
         verdict: 'EASY',
         color: 'var(--zM)',
-        icon: '🔵',
+        icon: ICON_CLOCK,
         title: 'Accumulated fatigue · easy day',
         main: 'TSB approaching lower boundary. Daniels: easy running is still highly beneficial — do not skip it for rest, but do not add quality.',
         workout: 'E-pace run, 30–50 min. "Benefits of E-pace are a function of time, not intensity." — Daniels',
@@ -1922,6 +1941,53 @@
       };
     }
 
+
+    // ═══════════════════════════════════════════════════════
+    // ACWR WITH TRAIL CORRECTION (KB §11.3 / Gabbett 2016)
+    // Trail sessions with D+ > 500m get ×1.3 load multiplier
+    // because Garmin HR-based load underweights eccentric downhill EIMD.
+    // Returns { raw, adjusted } — both may be null if insufficient data.
+    // ═══════════════════════════════════════════════════════
+    function computeACWRBoth(activities) {
+      const today = new Date(); today.setHours(23, 59, 59, 0);
+      const cutoff = new Date(today); cutoff.setDate(cutoff.getDate() - 28);
+      const raw28 = {}, adj28 = {};
+
+      (Array.isArray(activities) ? activities : []).forEach(a => {
+        const d = new Date(a.startTimeLocal || a.beginTimestamp);
+        if (d < cutoff || d > today) return;
+        const date = (a.startTimeLocal || '').slice(0, 10) ||
+          new Date(a.beginTimestamp).toISOString().slice(0, 10);
+        const dur = a.duration || a.elapsedDuration || 0;
+        const avgHR = a.averageHR || a.avgHr;
+        const cal = a.calories || a.totalKilocalories || 0;
+        const type = a.activityType?.typeKey || '';
+        const ascent = a.totalAscent || a.elevationGain || 0;
+        const tss = rTSS(dur, avgHR, cal);
+        const trailTypes = ['trail_running', 'hiking', 'backcountry_skiing'];
+        const mult = (trailTypes.includes(type) && ascent > 500) ? 1.3 : 1.0;
+        raw28[date] = (raw28[date] || 0) + tss;
+        adj28[date] = (adj28[date] || 0) + tss * mult;
+      });
+
+      const vals28r = [], vals7r = [], vals28a = [], vals7a = [];
+      for (let i = 27; i >= 0; i--) {
+        const d = new Date(today); d.setDate(d.getDate() - i);
+        const ds = d.toISOString().slice(0, 10);
+        vals28r.push(raw28[ds] || 0);
+        vals28a.push(adj28[ds] || 0);
+        if (i < 7) { vals7r.push(raw28[ds] || 0); vals7a.push(adj28[ds] || 0); }
+      }
+      const avg28r = vals28r.reduce((s, v) => s + v, 0) / 28;
+      const avg28a = vals28a.reduce((s, v) => s + v, 0) / 28;
+      const avg7r = vals7r.reduce((s, v) => s + v, 0) / 7;
+      const avg7a = vals7a.reduce((s, v) => s + v, 0) / 7;
+      return {
+        raw: avg28r < 0.1 ? null : avg7r / avg28r,
+        adjusted: avg28a < 0.1 ? null : avg7a / avg28a,
+        hasTrailCorrection: vals28a.some((v, i) => v !== vals28r[i]),
+      };
+    }
 
     function renderDash(data) {
       S.lastData = data;
@@ -1963,6 +2029,7 @@
       const tLimit = wk.totalKm * 0.10, iLimit = wk.totalKm * 0.08, rLimit = wk.totalKm * 0.05;
 
       const acwr = computeACWR(series);
+      const acwrBoth = computeACWRBoth(activities);
       const stid = seilerTID(activities);
       const rhrAlert = s.restingHeartRate && s.lastSevenDaysAvgRestingHeartRate &&
         (s.restingHeartRate - s.lastSevenDaysAvgRestingHeartRate >= 5);
@@ -1976,7 +2043,7 @@
       const coach = dailyCoach(last.tsb || 0, readyScore, pi.phase, null, wk);
       html += `<div class="coach-card" style="background:var(--s1);border:1px solid var(--border)">
     <div class="coach-glow" style="color:${coach.color}"></div>
-    <div class="coach-icon">${coach.icon}</div>
+    <div class="coach-icon" style="color:${coach.color}">${coach.icon}</div>
     <div class="coach-body">
       <div class="coach-verdict" style="color:${coach.color}">${coach.verdict}</div>
       <div class="coach-title" style="color:${coach.color}">${coach.title}</div>
@@ -2044,17 +2111,12 @@
       const rr = rampRate(series);
 
 
-      html += `<div class="g4" style="margin-bottom:14px;grid-template-columns:repeat(4,1fr)">
-    <div class="kpi" style="--kc:var(--accent2);animation-delay:.22s">
-      <div class="kpi-label">Projected CTL at Race</div>
-      <div class="kpi-val">${projAtRace ? fmt(projAtRace.ctl) : '—'}</div>
-      <div class="kpi-sub">${projAtRace ? 'if current load maintained' : 'no projection'}</div>
-    </div>
-    <div class="kpi" style="--kc:${rr === null ? 'var(--text3)' : rr > 7 ? 'var(--danger)' : rr > 4 ? 'var(--tsb)' : 'var(--good)'};animation-delay:.28s">
-      <div class="kpi-label">CTL Ramp Rate</div>
-      <div class="kpi-val">${rr === null ? '—' : (rr >= 0 ? '+' : '') + rr.toFixed(1)}</div>
-      <div class="kpi-sub">${rr === null ? 'need more data' : rr > 7 ? '⚠ Too fast (>7/week)' : rr > 4 ? 'Moderate build' : 'Safe progression'}</div>
-    </div>
+      html += (() => {
+        const acwrVal = acwrBoth.adjusted ?? acwrBoth.raw ?? acwr;
+        const acwrCls = acwrVal === null ? 'var(--text3)' : acwrVal > 1.5 ? 'var(--danger)' : acwrVal > 1.3 ? 'var(--tsb)' : acwrVal < 0.8 ? 'var(--tsb)' : 'var(--good)';
+        const acwrNote = acwrVal === null ? 'need data' : acwrVal > 1.5 ? '⚠ spike risk' : acwrVal > 1.3 ? 'monitor closely' : acwrVal < 0.8 ? 'undertraining' : '✓ safe zone';
+        const acwrLabel = acwrBoth.hasTrailCorrection ? 'ACWR (trail-adj.)' : 'ACWR (7/28d)';
+        return `<div class="g4" style="margin-bottom:14px;grid-template-columns:repeat(4,1fr)">
     <div class="kpi" style="--kc:var(--ctl);animation-delay:.06s">
       <div class="kpi-label">Fitness (CTL)</div>
       <div class="kpi-val">${fmt(last.ctl)}</div>
@@ -2065,8 +2127,6 @@
       <div class="kpi-val">${fmt(last.atl)}</div>
       <div class="kpi-sub">7-day acute load</div>
     </div>
-  </div>
-  <div class="g4" style="margin-bottom:14px;grid-template-columns:repeat(4,1fr)">
     <div class="kpi" style="--kc:var(--tsb);animation-delay:.18s">
       <div class="kpi-label">Form (TSB)</div>
       <div class="kpi-val">${fmt(last.tsb)}</div>
@@ -2077,17 +2137,30 @@
       <div class="kpi-val">${fmt(last.tss, 0)}</div>
       <div class="kpi-sub">rTSS (Daniels IF²)</div>
     </div>
-    <div class="kpi" style="--kc:var(--text2);animation-delay:.30s">
+  </div>
+  <div class="g4" style="margin-bottom:14px;grid-template-columns:repeat(4,1fr)">
+    <div class="kpi" style="--kc:${rr === null ? 'var(--text3)' : rr > 7 ? 'var(--danger)' : rr > 4 ? 'var(--tsb)' : 'var(--good)'};animation-delay:.28s">
+      <div class="kpi-label">CTL Ramp Rate</div>
+      <div class="kpi-val">${rr === null ? '—' : (rr >= 0 ? '+' : '') + rr.toFixed(1)}</div>
+      <div class="kpi-sub">${rr === null ? 'need more data' : rr > 7 ? '⚠ Too fast — cap at +7/wk' : rr > 4 ? 'Moderate build' : 'Safe progression'}</div>
+    </div>
+    <div class="kpi" style="--kc:${acwrCls};animation-delay:.34s">
+      <div class="kpi-label">${acwrLabel}</div>
+      <div class="kpi-val">${acwrVal !== null ? acwrVal.toFixed(2) : '—'}</div>
+      <div class="kpi-sub">${acwrNote}${acwrBoth.hasTrailCorrection ? ' · D+×1.3' : ''}</div>
+    </div>
+    <div class="kpi" style="--kc:var(--accent);animation-delay:.40s">
+      <div class="kpi-label">Proj. CTL at Race</div>
+      <div class="kpi-val">${projAtRace ? fmt(projAtRace.ctl) : '—'}</div>
+      <div class="kpi-sub">${projAtRace ? 'if current load maintained' : 'no projection'}</div>
+    </div>
+    <div class="kpi" style="--kc:${projAtRace && projAtRace.tsb > 5 && projAtRace.tsb < 25 ? 'var(--good)' : 'var(--text2)'};animation-delay:.46s">
       <div class="kpi-label">Proj. TSB at Race</div>
       <div class="kpi-val">${projAtRace ? fmt(projAtRace.tsb) : '—'}</div>
-      <div class="kpi-sub">${projAtRace ? (projAtRace.tsb > 5 && projAtRace.tsb < 25 ? '✓ Race-ready range' : 'Adjust taper') : ''}</div>
-    </div>
-    <div class="kpi" style="--kc:var(--text2);animation-delay:.36s">
-      <div class="kpi-label">Days to Race</div>
-      <div class="kpi-val">${pi.daysLeft}</div>
-      <div class="kpi-sub">${pi.raceALabel}</div>
+      <div class="kpi-sub">${projAtRace ? (projAtRace.tsb > 5 && projAtRace.tsb < 25 ? '✓ +5 to +25 target' : projAtRace.tsb <= 5 ? 'Taper more' : 'Overtapered risk') : ''}</div>
     </div>
   </div>`;
+      })();
 
       /* ── PMC Chart ───────────────────────────────────── */
       html += `<div class="chart-card" style="animation-delay:.2s">
@@ -2287,10 +2360,18 @@
     <div class="mr"><span class="ml">Fatigue ATL</span><span class="mv" style="color:var(--atl)">${fmt(last.atl)}</span></div>
     <div class="mr"><span class="ml">Form TSB</span><span class="mv ${tsbInfo.cls}">${fmt(last.tsb)} · ${tsbInfo.text}</span></div>
     ${ts?.vo2MaxValue ? `<div class="mr"><span class="ml">VO₂ Max</span><span class="mv blue">${ts.vo2MaxValue} ml/kg/min</span></div>` : ''}
-    ${acwr !== null ? (() => {
-      const acwrCls = acwr > 1.5 ? 'bad' : acwr > 1.3 ? 'warn' : acwr < 0.8 ? 'warn' : 'good';
-      const acwrNote = acwr > 1.5 ? ' ⚠ spike risk' : acwr > 1.3 ? ' monitor' : acwr < 0.8 ? ' undertraining' : ' ✓ safe';
-      return `<div class="mr"><span class="ml">ACWR (7/28d)</span><span class="mv ${acwrCls}">${acwr.toFixed(2)}${acwrNote}</span></div>`;
+    ${acwrBoth.raw !== null ? (() => {
+      const rawCls = acwrBoth.raw > 1.5 ? 'bad' : acwrBoth.raw > 1.3 ? 'warn' : acwrBoth.raw < 0.8 ? 'warn' : 'good';
+      const rows = [`<div class="mr"><span class="ml">ACWR raw (7/28d)</span><span class="mv ${rawCls}">${acwrBoth.raw.toFixed(2)}</span></div>`];
+      if (acwrBoth.hasTrailCorrection && acwrBoth.adjusted !== null) {
+        const adjCls = acwrBoth.adjusted > 1.5 ? 'bad' : acwrBoth.adjusted > 1.3 ? 'warn' : acwrBoth.adjusted < 0.8 ? 'warn' : 'good';
+        const adjNote = acwrBoth.adjusted > 1.5 ? ' ⚠ spike risk' : acwrBoth.adjusted > 1.3 ? ' monitor' : ' ✓ safe';
+        rows.push(`<div class="mr"><span class="ml">ACWR trail-adj. (×1.3)</span><span class="mv ${adjCls}">${acwrBoth.adjusted.toFixed(2)}${adjNote}</span></div>`);
+      } else {
+        const note = acwrBoth.raw > 1.5 ? ' ⚠ spike risk' : acwrBoth.raw > 1.3 ? ' monitor' : acwrBoth.raw < 0.8 ? ' undertraining' : ' ✓ safe zone';
+        rows[0] = `<div class="mr"><span class="ml">ACWR (7/28d)</span><span class="mv ${rawCls}">${acwrBoth.raw.toFixed(2)}${note}</span></div>`;
+      }
+      return rows.join('');
     })() : ''}
     <div class="mr"><span class="ml">Phase goal TSB</span><span class="mv" style="color:var(--tsb)">${pi.phase === 'IV' ? '+5 to +25' : '-10 to -30'}</span></div>
   </div>`;
@@ -2301,13 +2382,19 @@
       html += `<div class="g3">`;
 
       // Sleep
-      html += `<div class="card" style="--ct:var(--a2)">
+      html += (() => {
+        const slpColor = slpH == null ? 'var(--a2)' : slpH >= 7 ? 'var(--a2)' : slpH >= 6.5 ? 'var(--tsb)' : 'var(--danger)';
+        const slpStatus = slpH == null ? '' : slpH >= 7 ? 'Optimal' : slpH >= 6.5 ? 'Below optimal — monitor' : '< 6.5h — reduce intensity';
+        const slpAlertColor = slpH != null && slpH < 6.5 ? 'rgba(255,77,109,.1)' : 'rgba(255,214,10,.08)';
+        const slpBorderColor = slpH != null && slpH < 6.5 ? 'rgba(255,77,109,.3)' : 'rgba(255,214,10,.25)';
+        let slpHtml = `<div class="card" style="--ct:${slpColor}">
     <div class="card-title">Sleep</div>
-    <div style="font-family:var(--mono);font-size:48px;font-weight:500;line-height:1;color:var(--a2)">${slpH != null ? slpH.toFixed(1) : '—'}<span style="font-size:16px;color:var(--text3)"> h</span></div>
+    <div style="font-family:var(--mono);font-size:48px;font-weight:500;line-height:1;color:${slpColor}">${slpH != null ? slpH.toFixed(1) : '—'}<span style="font-size:16px;color:var(--text3)"> h</span></div>
     <div style="font-size:12px;color:var(--text2);margin-top:4px">${slpQ.replace(/_/g, ' ')}${slpScore ? ` · Score ${slpScore}` : ''}</div>
-    ${slpAlert ? `<div style="margin-top:8px;padding:6px 10px;background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.25);border-radius:4px;font-size:11px;color:var(--tsb)">⚠ ${slpH.toFixed(1)}h &lt; 6.5h — reduce intensity (KB §10.3)</div>` : ''}`;
-      if (deepP != null) {
-        html += `<div class="sleep-bar" style="margin-top:12px">
+    ${slpH != null && slpH < 7 ? `<div style="margin-top:8px;padding:6px 10px;background:${slpAlertColor};border:1px solid ${slpBorderColor};border-radius:4px;font-size:11px;color:${slpH < 6.5 ? 'var(--danger)' : 'var(--tsb)'}">⚠ ${slpStatus} (KB §10.3: &lt;7h ×5 nights → −10–15% TTE)</div>` : ''}
+    <div style="margin-top:8px;font-size:10px;color:var(--text3);font-family:var(--mono)">Target: ≥7h · 7-day rolling &lt;6.5h = reduce intensity</div>`;
+        if (deepP != null) {
+          slpHtml += `<div class="sleep-bar" style="margin-top:12px">
       <div style="flex:${deepP};background:var(--sleep-deep)"></div>
       <div style="flex:${ltP};background:var(--sleep-light)"></div>
       <div style="flex:${remP};background:var(--sleep-rem)"></div>
@@ -2317,10 +2404,12 @@
       <div class="sl-item"><div class="sl-dot" style="background:var(--sleep-light)"></div>Light ${ltP.toFixed(0)}%</div>
       <div class="sl-item"><div class="sl-dot" style="background:var(--sleep-rem)"></div>REM ${remP.toFixed(0)}%</div>
     </div>`;
-      }
-      if (hrvAvg != null) html += `<div class="mr" style="margin-top:10px"><span class="ml">HRV avg</span><span class="mv good">${fmt(hrvAvg, 0)} ms</span></div>`;
-      if (hrvBaseLo != null) html += `<div class="mr"><span class="ml">HRV baseline</span><span class="mv">${fmt(hrvBaseLo, 0)}–${fmt(hrvBaseHi, 0)} ms</span></div>`;
-      html += `</div>`;
+        }
+        if (hrvAvg != null) slpHtml += `<div class="mr" style="margin-top:10px"><span class="ml">HRV avg</span><span class="mv good">${fmt(hrvAvg, 0)} ms</span></div>`;
+        if (hrvBaseLo != null) slpHtml += `<div class="mr"><span class="ml">HRV baseline</span><span class="mv">${fmt(hrvBaseLo, 0)}–${fmt(hrvBaseHi, 0)} ms</span></div>`;
+        slpHtml += `</div>`;
+        return slpHtml;
+      })();
 
       // Body battery
       html += `<div class="card" style="--ct:var(--accent)">
@@ -2358,19 +2447,21 @@
       /* ── Section: Activity + Steps ───────────────────── */
       html += `<div class="g2">`;
 
-      // Steps
-      html += `<div class="card">
+      // Steps / Activity Today
+      html += (() => {
+        const weeklyRTSS = series.slice(-7).reduce((s, d) => s + d.tss, 0);
+        const weeklyHours = wk.tHours;
+        return `<div class="card">
     <div class="card-title">Activity Today</div>
     <div class="mr"><span class="ml">Steps</span><span class="mv">${s.totalSteps?.toLocaleString() ?? '—'} / ${s.dailyStepGoal?.toLocaleString() ?? '—'}</span></div>
     ${s.totalSteps && s.dailyStepGoal ? `<div class="prog" style="margin-bottom:10px"><div class="prog-fill" style="width:${pct(s.totalSteps, s.dailyStepGoal)}%;background:var(--accent)"></div></div>` : ''}
-    <div class="mr"><span class="ml">Distance</span><span class="mv">${s.totalDistanceMeters ? (s.totalDistanceMeters / 1000).toFixed(1) + ' km' : '—'}</span></div>
+    <div class="mr"><span class="ml">Distance today</span><span class="mv">${s.totalDistanceMeters ? (s.totalDistanceMeters / 1000).toFixed(1) + ' km' : '—'}</span></div>
     <div class="mr"><span class="ml">Active calories</span><span class="mv">${s.activeKilocalories ?? '—'} kcal</span></div>
-    <div class="mr"><span class="ml">Total calories</span><span class="mv">${s.totalKilocalories ?? '—'} kcal</span></div>
-    <div class="mr"><span class="ml">Intensity min</span><span class="mv ${(s.moderateIntensityMinutes || 0) + (s.vigorousIntensityMinutes || 0) >= 150 ? 'good' : ''}">
-      ${((s.moderateIntensityMinutes || 0) + (s.vigorousIntensityMinutes || 0)).toFixed(0)} / 150
-    </span></div>
     <div class="mr"><span class="ml">Weekly km (7d)</span><span class="mv blue">${wk.totalKm.toFixed(1)} km</span></div>
+    <div class="mr"><span class="ml">Weekly hours (7d)</span><span class="mv blue">${weeklyHours.toFixed(1)} h</span></div>
+    <div class="mr"><span class="ml">Weekly rTSS (7d)</span><span class="mv" style="color:var(--orng)">${weeklyRTSS.toFixed(0)}</span></div>
   </div>`;
+      })();
 
       // Recent activities with zone badges
       html += `<div class="card">
@@ -2388,8 +2479,11 @@
           const zone = classifyZone(avgHR);
           const tss = rTSS(dur, avgHR, cal);
           const ds = (a.startTimeLocal || '').slice(0, 10);
+          const [bCol, bLbl] = actBadge(type);
           html += `<div class="act-item">
-        <div class="act-icon">${actIcon(type)}</div>
+        <div class="act-icon" style="background:${bCol}15;border-color:${bCol}35;color:${bCol}">
+          <span style="font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:.04em">${bLbl}</span>
+        </div>
         <div class="act-info">
           <div class="act-name">${name}</div>
           <div class="act-meta">${ds} · ${fmtTime(dur)}${avgHR ? ` · ♥ ${avgHR}` : ''}</div>
@@ -2456,51 +2550,10 @@
     </div>
   </div>`;
 
-      /* ── Methodology ─────────────────────────────────── */
-      html += `<div class="card mb" style="animation-delay:.5s">
-    <div class="card-title">Methodology — Jack Daniels · Seiler · Banister · Gabbett</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;margin-top:4px">
-      <div>
-        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">rTSS (Daniels IF²)</div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6">Intensity Factor per zone, normalised to T pace (threshold = 100 TSS/hr). More accurate than TRIMP as it reflects the <em>purpose</em> of each zone.</div>
-        <div class="formula">rTSS = h × IF² × 100 / 0.7744
-E: IF=0.70 · M: IF=0.82
-T: IF=0.88 · I: IF=0.975
-R: IF=1.05</div>
-      </div>
-      <div>
-        <div style="font-size:12px;font-weight:700;color:var(--ctl);margin-bottom:6px">CTL / ATL / TSB (Banister/Skiba)</div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6">Exponential moving averages of daily rTSS. TSB = CTL − ATL. Optimal training: −10 to −30; race ready: +5 to +25.</div>
-        <div class="formula">CTL_t = CTL_{t-1}×e^(-1/42)
-       + rTSS_t×(1-e^(-1/42))
-ATL_t = ATL_{t-1}×e^(-1/7)
-       + rTSS_t×(1-e^(-1/7))</div>
-      </div>
-      <div>
-        <div style="font-size:12px;font-weight:700;color:var(--zT);margin-bottom:6px">Zone Boundaries (Daniels)</div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6">HR-based zone detection using Daniels' percentages of HRmax.</div>
-        <div class="formula">E  &lt;75% HRmax (${(S.HRmax * .75).toFixed(0)} bpm)
-M  &lt;82% HRmax (${(S.HRmax * .82).toFixed(0)} bpm)
-T  &lt;90% HRmax (${(S.HRmax * .90).toFixed(0)} bpm)
-I  &lt;98% HRmax (${(S.HRmax * .98).toFixed(0)} bpm)
-R  ≥98% HRmax (${(S.HRmax * .98).toFixed(0)} bpm)</div>
-      </div>
-      <div>
-        <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:6px">ACWR · Seiler TID (Gabbett/Seiler)</div>
-        <div style="font-size:12px;color:var(--text2);line-height:1.6">ACWR: 7-day avg TSS / 28-day avg TSS. Sweet spot 0.8–1.3; &gt;1.5 = spike risk. TID: sessions classified by avg HR into Seiler's 3 physiological zones.</div>
-        <div class="formula">ACWR = avg7d_TSS / avg28d_TSS
-Safe: 0.8–1.3 · Danger: &gt;1.5
 
-Seiler-Z1 (easy):  &lt;75% HRmax
-Seiler-Z2 (tempo): 75–90% HRmax
-Seiler-Z3 (hard):  ≥90% HRmax
-Target: ~80% Z1 · ≤5% Z2 · ~15% Z3</div>
-      </div>
-    </div>
-  </div>`;
-
-      html += `<div style="font-family:var(--mono);font-size:10px;color:var(--text3);text-align:center;padding:14px 0;border-top:1px solid var(--border)">
-    DANIELS' RUNNING FORMULA · SEILER (2010) TID · BANISTER/SKIBA IMPULSE-RESPONSE · GABBETT (2016) ACWR · BILLAT (2000) vVO₂max · DATA: GARMIN CONNECT
+      html += `<div style="font-family:var(--mono);font-size:10px;color:var(--text3);text-align:center;padding:12px 0;border-top:1px solid var(--border);line-height:1.8">
+    <span style="color:var(--text3)">Daniels' Running Formula</span> · <span style="color:var(--text3)">Seiler (2010) TID</span> · <span style="color:var(--text3)">Banister/Skiba PMC</span> · <span style="color:var(--text3)">Gabbett (2016) ACWR</span> · <span style="color:var(--text3)">Billat (2000) vVO₂max</span><br>
+    Zone boundaries: E &lt;${(S.HRmax * .75).toFixed(0)} · M &lt;${(S.HRmax * .82).toFixed(0)} · T &lt;${(S.HRmax * .90).toFixed(0)} · I &lt;${(S.HRmax * .98).toFixed(0)} · R ≥${(S.HRmax * .98).toFixed(0)} bpm · HRmax ${S.HRmax}
   </div>`;
 
       document.getElementById('dash-content').innerHTML = html;
