@@ -1111,84 +1111,6 @@
       }
     }
 
-    /* ─── COACH CARD ──────────────────── */
-    .coach-card {
-      border-radius: var(--r);
-      padding: 20px 24px;
-      margin-bottom: 14px;
-      display: flex;
-      align-items: flex-start;
-      gap: 18px;
-      animation: fadeUp .4s ease both;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .coach-icon {
-      width: 36px;
-      height: 36px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-top: 2px;
-    }
-
-    .coach-body {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .coach-verdict {
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: .2em;
-      text-transform: uppercase;
-      margin-bottom: 4px;
-    }
-
-    .coach-title {
-      font-size: 20px;
-      font-weight: 800;
-      margin-bottom: 6px;
-    }
-
-    .coach-main {
-      font-size: 13px;
-      color: var(--text2);
-      line-height: 1.65;
-      margin-bottom: 10px;
-    }
-
-    .coach-workout {
-      font-family: var(--mono);
-      font-size: 12px;
-      padding: 8px 12px;
-      background: rgba(255, 255, 255, .04);
-      border-radius: 4px;
-      border-left: 3px solid;
-      line-height: 1.6;
-    }
-
-    .coach-ref {
-      font-size: 10px;
-      color: var(--text3);
-      margin-top: 8px;
-      font-style: italic;
-      font-family: var(--mono);
-    }
-
-    .coach-glow {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      opacity: .06;
-      background: radial-gradient(ellipse 80% 80% at 10% 50%, currentColor, transparent);
-      pointer-events: none;
-    }
-
     /* ─── VDOT CALCULATOR ─────────────── */
     .vdot-grid {
       display: grid;
@@ -1297,6 +1219,54 @@
       font-size: 15px;
       font-weight: 500;
       color: var(--text);
+    }
+
+    /* ─── TREND CHARTS ────────────────── */
+    .trend-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 640px) {
+      .trend-grid { grid-template-columns: 1fr; }
+    }
+    .trend-chart-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: 8px;
+      font-family: var(--mono);
+    }
+    .trend-axis-row {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--text3);
+      margin-top: 4px;
+    }
+    .trend-legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .trend-leg-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      font-family: var(--mono);
+      color: var(--text2);
+    }
+    .trend-leg-dot {
+      width: 8px;
+      height: 3px;
+      border-radius: 2px;
+      flex-shrink: 0;
     }
 
     /* ─── RAMP RATE ────────────────────── */
@@ -1649,6 +1619,7 @@
        HELPERS
     ══════════════════════════════════════════════ */
     const fmt = (v, d = 1) => v == null ? '—' : (+v).toFixed(d);
+    const parseSleepHours = raw => { const o = raw?.dailySleepDTO || raw || {}; return o.sleepTimeSeconds ? o.sleepTimeSeconds / 3600 : null; };
     const fmtKm = m => m ? (m / 1000).toFixed(2) + ' km' : '—';
     const fmtTime = s => { if (!s) return '—'; const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h > 0 ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`; };
     const dateLabel = s => new Date(s + 'T12:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
@@ -1991,7 +1962,7 @@
 
     function renderDash(data) {
       S.lastData = data;
-      const { stats, sleep, hrv, readiness, trainingStatus, activities } = data;
+      const { stats, sleep, hrv, readiness, trainingStatus, activities, weeklyWellness } = data;
       const series = computePMC(activities);
       const last = series[series.length - 1] || {};
       const wk = weeklyStats(activities);
@@ -2005,8 +1976,8 @@
       const readyDesc = (ready?.feedback || '').replace(/_/g, ' ').toLowerCase();
 
       // Sleep
+      const slpH = parseSleepHours(sleep);
       const slp = sleep?.dailySleepDTO || sleep || {};
-      const slpH = slp.sleepTimeSeconds ? (slp.sleepTimeSeconds / 3600) : null;
       const slpScore = slp.sleepScores?.overall?.value ?? slp.sleepScore ?? null;
       const slpQ = slp.sleepScores?.overall?.qualifier ?? slp.sleepScoreQualifier ?? '—';
       const deepP = slp.deepSleepSeconds && slp.sleepTimeSeconds ? slp.deepSleepSeconds / slp.sleepTimeSeconds * 100 : null;
@@ -2039,24 +2010,14 @@
       let html = '';
 
 
-      /* ── Daily Coach ─────────────────────────────────── */
-      const coach = dailyCoach(last.tsb || 0, readyScore, pi.phase, null, wk);
-      html += `<div class="coach-card" style="background:var(--s1);border:1px solid var(--border)">
-    <div class="coach-glow" style="color:${coach.color}"></div>
-    <div class="coach-icon" style="color:${coach.color}">${coach.icon}</div>
-    <div class="coach-body">
-      <div class="coach-verdict" style="color:${coach.color}">${coach.verdict}</div>
-      <div class="coach-title" style="color:${coach.color}">${coach.title}</div>
-      <div class="coach-main">${coach.main}</div>
-      <div class="coach-workout" style="border-color:${coach.color};color:var(--text)">${coach.workout}</div>
-      <div class="coach-ref">${coach.ref}</div>
-    </div>
-    <div style="flex-shrink:0;text-align:right;font-family:var(--mono);font-size:10px;color:var(--text3);line-height:2">
-      <div>CTL <span style="color:var(--ctl)">${fmt(last.ctl)}</span></div>
-      <div>TSB <span style="color:${(last.tsb || 0) > 0 ? 'var(--good)' : 'var(--atl)'}">${fmt(last.tsb)}</span></div>
-      <div>Ready <span style="color:var(--text)">${readyScore ?? '—'}</span></div>
-    </div>
-  </div>`;
+      /* ── Weekly wellness trend data ─────────────────── */
+      const ww = Array.isArray(weeklyWellness) ? weeklyWellness : [];
+      const wwDates  = ww.map(d => d.date);
+      const wwRHR    = ww.map(d => d.stats?.restingHeartRate ?? null);
+      const wwStress = ww.map(d => d.stats?.averageStressLevel ?? null);
+      const wwBBHi   = ww.map(d => d.stats?.bodyBatteryHighestValue ?? null);
+      const wwBBLo   = ww.map(d => d.stats?.bodyBatteryLowestValue ?? null);
+      const wwSlpH   = ww.map(d => parseSleepHours(d.sleep));
 
       /* ── Section: Race Countdown + Phase ────────────── */
       html += `<div class="g2" style="margin-bottom:14px">`;
@@ -2360,41 +2321,31 @@
     <div class="mr"><span class="ml">Fatigue ATL</span><span class="mv" style="color:var(--atl)">${fmt(last.atl)}</span></div>
     <div class="mr"><span class="ml">Form TSB</span><span class="mv ${tsbInfo.cls}">${fmt(last.tsb)} · ${tsbInfo.text}</span></div>
     ${ts?.vo2MaxValue ? `<div class="mr"><span class="ml">VO₂ Max</span><span class="mv blue">${ts.vo2MaxValue} ml/kg/min</span></div>` : ''}
-    ${acwrBoth.raw !== null ? (() => {
-      const rawCls = acwrBoth.raw > 1.5 ? 'bad' : acwrBoth.raw > 1.3 ? 'warn' : acwrBoth.raw < 0.8 ? 'warn' : 'good';
-      const rows = [`<div class="mr"><span class="ml">ACWR raw (7/28d)</span><span class="mv ${rawCls}">${acwrBoth.raw.toFixed(2)}</span></div>`];
-      if (acwrBoth.hasTrailCorrection && acwrBoth.adjusted !== null) {
-        const adjCls = acwrBoth.adjusted > 1.5 ? 'bad' : acwrBoth.adjusted > 1.3 ? 'warn' : acwrBoth.adjusted < 0.8 ? 'warn' : 'good';
-        const adjNote = acwrBoth.adjusted > 1.5 ? ' ⚠ spike risk' : acwrBoth.adjusted > 1.3 ? ' monitor' : ' ✓ safe';
-        rows.push(`<div class="mr"><span class="ml">ACWR trail-adj. (×1.3)</span><span class="mv ${adjCls}">${acwrBoth.adjusted.toFixed(2)}${adjNote}</span></div>`);
-      } else {
-        const note = acwrBoth.raw > 1.5 ? ' ⚠ spike risk' : acwrBoth.raw > 1.3 ? ' monitor' : acwrBoth.raw < 0.8 ? ' undertraining' : ' ✓ safe zone';
-        rows[0] = `<div class="mr"><span class="ml">ACWR (7/28d)</span><span class="mv ${rawCls}">${acwrBoth.raw.toFixed(2)}${note}</span></div>`;
-      }
-      return rows.join('');
-    })() : ''}
     <div class="mr"><span class="ml">Phase goal TSB</span><span class="mv" style="color:var(--tsb)">${pi.phase === 'IV' ? '+5 to +25' : '-10 to -30'}</span></div>
   </div>`;
       html += `</div>`;
 
       /* ── Section: Health Vitals ──────────────────────── */
       html += `<div class="sec-label" style="--lc:var(--atl)">Health Vitals</div>`;
-      html += `<div class="g3">`;
+      html += `<div class="g2">`;
 
-      // Sleep
-      html += (() => {
+      // Sleep card
+      (() => {
         const slpColor = slpH == null ? 'var(--a2)' : slpH >= 7 ? 'var(--a2)' : slpH >= 6.5 ? 'var(--tsb)' : 'var(--danger)';
         const slpStatus = slpH == null ? '' : slpH >= 7 ? 'Optimal' : slpH >= 6.5 ? 'Below optimal — monitor' : '< 6.5h — reduce intensity';
-        const slpAlertColor = slpH != null && slpH < 6.5 ? 'rgba(255,77,109,.1)' : 'rgba(255,214,10,.08)';
-        const slpBorderColor = slpH != null && slpH < 6.5 ? 'rgba(255,77,109,.3)' : 'rgba(255,214,10,.25)';
-        let slpHtml = `<div class="card" style="--ct:${slpColor}">
+        const slpAlertBg = slpH != null && slpH < 6.5 ? 'rgba(255,77,109,.1)' : 'rgba(255,214,10,.08)';
+        const slpAlertBd = slpH != null && slpH < 6.5 ? 'rgba(255,77,109,.3)' : 'rgba(255,214,10,.25)';
+        html += `<div class="card" style="--ct:${slpColor}">
     <div class="card-title">Sleep</div>
-    <div style="font-family:var(--mono);font-size:48px;font-weight:500;line-height:1;color:${slpColor}">${slpH != null ? slpH.toFixed(1) : '—'}<span style="font-size:16px;color:var(--text3)"> h</span></div>
-    <div style="font-size:12px;color:var(--text2);margin-top:4px">${slpQ.replace(/_/g, ' ')}${slpScore ? ` · Score ${slpScore}` : ''}</div>
-    ${slpH != null && slpH < 7 ? `<div style="margin-top:8px;padding:6px 10px;background:${slpAlertColor};border:1px solid ${slpBorderColor};border-radius:4px;font-size:11px;color:${slpH < 6.5 ? 'var(--danger)' : 'var(--tsb)'}">⚠ ${slpStatus} (KB §10.3: &lt;7h ×5 nights → −10–15% TTE)</div>` : ''}
-    <div style="margin-top:8px;font-size:10px;color:var(--text3);font-family:var(--mono)">Target: ≥7h · 7-day rolling &lt;6.5h = reduce intensity</div>`;
-        if (deepP != null) {
-          slpHtml += `<div class="sleep-bar" style="margin-top:12px">
+    <div style="display:flex;align-items:flex-end;gap:14px;margin-bottom:6px">
+      <div style="font-family:var(--mono);font-size:48px;font-weight:500;line-height:1;color:${slpColor}">${slpH != null ? slpH.toFixed(1) : '—'}<span style="font-size:16px;color:var(--text3)"> h</span></div>
+      <div style="padding-bottom:6px">
+        <div style="font-size:12px;color:var(--text2)">${slpQ.replace(/_/g, ' ')}${slpScore ? ` · Score ${slpScore}` : ''}</div>
+        ${hrvAvg != null ? `<div style="font-size:11px;color:var(--good);margin-top:3px">HRV ${fmt(hrvAvg, 0)} ms${hrvBaseLo != null ? ` · baseline ${fmt(hrvBaseLo, 0)}–${fmt(hrvBaseHi, 0)}` : ''}</div>` : ''}
+      </div>
+    </div>
+    ${slpH != null && slpH < 7 ? `<div style="margin-bottom:8px;padding:6px 10px;background:${slpAlertBg};border:1px solid ${slpAlertBd};border-radius:4px;font-size:11px;color:${slpH < 6.5 ? 'var(--danger)' : 'var(--tsb)'}">⚠ ${slpStatus} · &lt;7h ×5 nights → −10–15% TTE</div>` : ''}
+    ${deepP != null ? `<div class="sleep-bar" style="margin-top:6px">
       <div style="flex:${deepP};background:var(--sleep-deep)"></div>
       <div style="flex:${ltP};background:var(--sleep-light)"></div>
       <div style="flex:${remP};background:var(--sleep-rem)"></div>
@@ -2403,69 +2354,96 @@
       <div class="sl-item"><div class="sl-dot" style="background:var(--sleep-deep)"></div>Deep ${deepP.toFixed(0)}%</div>
       <div class="sl-item"><div class="sl-dot" style="background:var(--sleep-light)"></div>Light ${ltP.toFixed(0)}%</div>
       <div class="sl-item"><div class="sl-dot" style="background:var(--sleep-rem)"></div>REM ${remP.toFixed(0)}%</div>
-    </div>`;
-        }
-        if (hrvAvg != null) slpHtml += `<div class="mr" style="margin-top:10px"><span class="ml">HRV avg</span><span class="mv good">${fmt(hrvAvg, 0)} ms</span></div>`;
-        if (hrvBaseLo != null) slpHtml += `<div class="mr"><span class="ml">HRV baseline</span><span class="mv">${fmt(hrvBaseLo, 0)}–${fmt(hrvBaseHi, 0)} ms</span></div>`;
-        slpHtml += `</div>`;
-        return slpHtml;
+    </div>` : ''}
+    <div style="margin-top:8px;font-size:10px;color:var(--text3);font-family:var(--mono)">Target: ≥7h · 7-day rolling &lt;6.5h = reduce intensity</div>
+  </div>`;
       })();
 
-      // Body battery
-      html += `<div class="card" style="--ct:var(--accent)">
-    <div class="card-title">Body Battery</div>
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-      <div style="position:relative;width:52px;height:26px;border:2px solid var(--accent);border-radius:3px;flex-shrink:0">
-        <div style="position:absolute;right:-5px;top:50%;transform:translateY(-50%);width:4px;height:10px;background:var(--accent);border-radius:0 2px 2px 0"></div>
-        <div style="position:absolute;inset:2px;border-radius:1px;background:var(--accent);width:${bbPct ?? 0}%"></div>
-      </div>
-      <div style="font-family:var(--mono);font-size:42px;font-weight:500;line-height:1;color:var(--accent)">${bbPct ?? '—'}</div>
-    </div>
-    <div class="mr"><span class="ml">Peak today</span><span class="mv">${s.bodyBatteryHighestValue ?? '—'}</span></div>
-    <div class="mr"><span class="ml">Lowest today</span><span class="mv">${s.bodyBatteryLowestValue ?? '—'}</span></div>
-    <div class="mr"><span class="ml">Charged</span><span class="mv good">+${s.bodyBatteryChargedValue ?? '—'}</span></div>
-    <div class="mr"><span class="ml">Drained</span><span class="mv bad">−${s.bodyBatteryDrainedValue ?? '—'}</span></div>
-  </div>`;
-
-      // HR & Stress
+      // Body Battery + HR + Stress merged card
       html += `<div class="card" style="--ct:var(--orng)">
-    <div class="card-title">Heart Rate & Stress</div>
-    <div style="display:flex;gap:18px;align-items:flex-end;margin-bottom:12px">
-      <div><div style="font-family:var(--mono);font-size:42px;font-weight:500;line-height:1;color:var(--orng)">${s.restingHeartRate ?? '—'}</div>
-           <div style="font-size:11px;color:var(--text2)">Resting HR (bpm)</div></div>
-      <div style="padding-bottom:4px"><div style="font-family:var(--mono);font-size:28px;font-weight:500;color:var(--text2)">${s.averageStressLevel ?? '—'}</div>
-           <div style="font-size:11px;color:var(--text2)">Avg Stress</div></div>
+    <div class="card-title">Body Battery · Heart Rate · Stress</div>
+    <div style="display:flex;gap:20px;align-items:flex-end;margin-bottom:12px;flex-wrap:wrap">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+          <div style="position:relative;width:44px;height:22px;border:2px solid var(--accent);border-radius:3px;flex-shrink:0">
+            <div style="position:absolute;right:-4px;top:50%;transform:translateY(-50%);width:3px;height:8px;background:var(--accent);border-radius:0 2px 2px 0"></div>
+            <div style="position:absolute;inset:2px;border-radius:1px;background:var(--accent);width:${bbPct ?? 0}%"></div>
+          </div>
+          <div style="font-family:var(--mono);font-size:38px;font-weight:500;line-height:1;color:var(--accent)">${bbPct ?? '—'}</div>
+        </div>
+        <div style="font-size:11px;color:var(--text2)">Body Battery now</div>
+      </div>
+      <div>
+        <div style="font-family:var(--mono);font-size:38px;font-weight:500;line-height:1;color:var(--orng)">${s.restingHeartRate ?? '—'}</div>
+        <div style="font-size:11px;color:var(--text2)">Resting HR (bpm)</div>
+      </div>
+      <div style="padding-bottom:2px">
+        <div style="font-family:var(--mono);font-size:26px;font-weight:500;color:var(--text2)">${s.averageStressLevel ?? '—'}</div>
+        <div style="font-size:11px;color:var(--text2)">Avg Stress</div>
+      </div>
     </div>
+    <div class="mr"><span class="ml">BB peak / low today</span><span class="mv">${s.bodyBatteryHighestValue ?? '—'} / ${s.bodyBatteryLowestValue ?? '—'}</span></div>
+    <div class="mr"><span class="ml">BB charged / drained</span><span class="mv"><span class="mv good">+${s.bodyBatteryChargedValue ?? '—'}</span> / <span class="mv bad">−${s.bodyBatteryDrainedValue ?? '—'}</span></span></div>
     <div class="mr"><span class="ml">7-day avg RHR</span><span class="mv">${s.lastSevenDaysAvgRestingHeartRate ?? '—'} bpm</span></div>
     <div class="mr"><span class="ml">HR range today</span><span class="mv">${s.minHeartRate ?? '—'}–${s.maxHeartRate ?? '—'} bpm</span></div>
     <div class="mr"><span class="ml">Respiration avg</span><span class="mv">${s.averageWakingRespirationValue ?? '—'} br/m</span></div>
-    <div class="mr"><span class="ml">HRV overnight</span><span class="mv good">${hrvAvg ? fmt(hrvAvg, 0) + ' ms' : '—'}</span></div>
-    ${rhrAlert ? `<div style="margin-top:8px;padding:6px 10px;background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.25);border-radius:4px;font-size:11px;color:var(--tsb)">⚠ RHR +${(s.restingHeartRate - s.lastSevenDaysAvgRestingHeartRate).toFixed(0)} bpm above 7d avg — consider rest or Z1 only (KB §10.4)</div>` : ''}
+    ${rhrAlert ? `<div style="margin-top:8px;padding:6px 10px;background:rgba(255,214,10,.08);border:1px solid rgba(255,214,10,.25);border-radius:4px;font-size:11px;color:var(--tsb)">⚠ RHR +${(s.restingHeartRate - s.lastSevenDaysAvgRestingHeartRate).toFixed(0)} bpm above 7d avg — consider rest or Z1 only</div>` : ''}
   </div>`;
       html += `</div>`;
 
-      /* ── Section: Activity + Steps ───────────────────── */
+      /* ── Section: Recovery Trends (7-day) ───────────── */
+      html += `<div class="sec-label" style="--lc:var(--a2);margin-top:4px">Recovery Trends · 7 Days</div>`;
+      html += `<div class="trend-grid">`;
+
+      // RHR + Body Battery chart
+      html += `<div class="card" style="--ct:var(--orng)">
+    <div class="card-title">Resting HR · Body Battery</div>
+    <div style="position:relative"><canvas id="rhrBBCanvas" height="130"></canvas></div>
+    <div class="trend-axis-row">
+      <span>${wwDates[0] ? wwDates[0].slice(5) : ''}</span>
+      <span>${wwDates[6] ? wwDates[6].slice(5) : ''}</span>
+    </div>
+    <div class="trend-legend">
+      <div class="trend-leg-item"><div class="trend-leg-dot" style="background:var(--orng)"></div>RHR (bpm)</div>
+      <div class="trend-leg-item"><div class="trend-leg-dot" style="background:var(--accent)"></div>Body Battery peak</div>
+      <div class="trend-leg-item"><div class="trend-leg-dot" style="background:rgba(74,255,180,.3)"></div>Body Battery low</div>
+    </div>
+  </div>`;
+
+      // Sleep + Stress chart
+      html += `<div class="card" style="--ct:var(--a2)">
+    <div class="card-title">Sleep · Stress</div>
+    <div style="position:relative"><canvas id="sleepStressCanvas" height="130"></canvas></div>
+    <div class="trend-axis-row">
+      <span>${wwDates[0] ? wwDates[0].slice(5) : ''}</span>
+      <span>${wwDates[6] ? wwDates[6].slice(5) : ''}</span>
+    </div>
+    <div class="trend-legend">
+      <div class="trend-leg-item"><div class="trend-leg-dot" style="background:var(--a2)"></div>Sleep (h)</div>
+      <div class="trend-leg-item"><div class="trend-leg-dot" style="background:var(--orng)"></div>Avg Stress</div>
+      <div class="trend-leg-item"><div class="trend-leg-dot" style="background:rgba(74,255,180,.5);width:16px;height:1px;border-top:1px dashed var(--accent)"></div>7h target</div>
+    </div>
+  </div>`;
+
+      html += `</div>`;
+
+      /* ── Section: Recent Activities ──────────────────── */
       html += `<div class="g2">`;
 
-      // Steps / Activity Today
-      html += (() => {
-        const weeklyRTSS = series.slice(-7).reduce((s, d) => s + d.tss, 0);
-        const weeklyHours = wk.tHours;
-        return `<div class="card">
-    <div class="card-title">Activity Today</div>
-    <div class="mr"><span class="ml">Steps</span><span class="mv">${s.totalSteps?.toLocaleString() ?? '—'} / ${s.dailyStepGoal?.toLocaleString() ?? '—'}</span></div>
-    ${s.totalSteps && s.dailyStepGoal ? `<div class="prog" style="margin-bottom:10px"><div class="prog-fill" style="width:${pct(s.totalSteps, s.dailyStepGoal)}%;background:var(--accent)"></div></div>` : ''}
-    <div class="mr"><span class="ml">Distance today</span><span class="mv">${s.totalDistanceMeters ? (s.totalDistanceMeters / 1000).toFixed(1) + ' km' : '—'}</span></div>
-    <div class="mr"><span class="ml">Active calories</span><span class="mv">${s.activeKilocalories ?? '—'} kcal</span></div>
-    <div class="mr"><span class="ml">Weekly km (7d)</span><span class="mv blue">${wk.totalKm.toFixed(1)} km</span></div>
-    <div class="mr"><span class="ml">Weekly hours (7d)</span><span class="mv blue">${weeklyHours.toFixed(1)} h</span></div>
-    <div class="mr"><span class="ml">Weekly rTSS (7d)</span><span class="mv" style="color:var(--orng)">${weeklyRTSS.toFixed(0)}</span></div>
-  </div>`;
-      })();
-
-      // Recent activities with zone badges
-      html += `<div class="card">
-    <div class="card-title">Recent Activities (7 days)</div>`;
+      // Recent activities with zone badges + weekly summary row
+      const weeklyRTSS = series.slice(-7).reduce((s, d) => s + d.tss, 0);
+      html += `<div class="card" style="grid-column:1/-1">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div class="card-title" style="margin-bottom:0">Recent Activities · 7 days</div>
+      <div style="display:flex;gap:16px;font-family:var(--mono);font-size:11px;color:var(--text3)">
+        ${s.totalSteps ? `<span>👟 ${s.totalSteps.toLocaleString()} <span style="color:var(--text3)">steps</span></span>` : ''}
+        <span style="color:var(--a2)">${wk.totalKm.toFixed(1)} km</span>
+        <span style="color:var(--a2)">${wk.tHours.toFixed(1)} h</span>
+        <span style="color:var(--orng)">${weeklyRTSS.toFixed(0)} rTSS</span>
+        ${s.activeKilocalories ? `<span>${s.activeKilocalories} kcal</span>` : ''}
+      </div>
+    </div>
+    ${s.totalSteps && s.dailyStepGoal ? `<div class="prog" style="margin-bottom:10px"><div class="prog-fill" style="width:${pct(s.totalSteps, s.dailyStepGoal)}%;background:var(--accent)"></div></div>` : ''}`;
       if (wk.recent.length === 0) {
         html += `<div style="color:var(--text3);font-size:12px;padding:16px 0;text-align:center">No activities in the last 7 days</div>`;
       } else {
@@ -2567,6 +2545,8 @@
       requestAnimationFrame(() => {
         drawPMC(series);
         drawZoneChart(wk.tDist, wk.totalKm);
+        drawRhrBB(wwDates, wwRHR, wwBBHi, wwBBLo);
+        drawSleepStress(wwDates, wwSlpH, wwStress);
       });
     }
 
@@ -2825,6 +2805,172 @@
       ctx.fillStyle = '#ffd60a'; ctx.fillText(`T ≤ ${(totalKm * .10).toFixed(1)}km`, refX, startY + 24);
       ctx.fillStyle = '#ff7b3d'; ctx.fillText(`I ≤ ${(totalKm * .08).toFixed(1)}km`, refX, startY + 38);
       ctx.fillStyle = '#ff4d6d'; ctx.fillText(`R ≤ ${(totalKm * .05).toFixed(1)}km`, refX, startY + 52);
+    }
+
+    /* ══════════════════════════════════════════════
+       RHR + BODY BATTERY TREND CHART (7 days)
+    ══════════════════════════════════════════════ */
+    function drawRhrBB(dates, rhr, bbHi, bbLo) {
+      const canvas = document.getElementById('rhrBBCanvas');
+      if (!canvas) return;
+      const dpr = window.devicePixelRatio || 1;
+      const W = canvas.parentElement.clientWidth, H = 130;
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+      const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
+
+      const cs = getComputedStyle(document.documentElement);
+      const colOrng  = cs.getPropertyValue('--orng').trim()  || '#ff7b3d';
+      const colAccent= cs.getPropertyValue('--accent').trim()|| '#4affb4';
+      const colGrid  = cs.getPropertyValue('--text3').trim() || '#3d4560';
+      const colBG    = cs.getPropertyValue('--b2').trim()    || '#2d3448';
+
+      const n = dates.length;
+      if (n === 0) return;
+
+      const PAD = { top: 12, right: 12, bottom: 8, left: 36 };
+      const CW = W - PAD.left - PAD.right, CH = H - PAD.top - PAD.bottom;
+
+      // RHR scale: left axis (30–90 bpm window)
+      const rhrValid = rhr.filter(v => v != null);
+      const rhrMin = rhrValid.length ? Math.max(30, Math.min(...rhrValid) - 5) : 40;
+      const rhrMax = rhrValid.length ? Math.min(90, Math.max(...rhrValid) + 5) : 75;
+
+      // BB scale: 0–100, plotted on same axis scaled to right half visually (dual-axis trick)
+      const xOf = i => PAD.left + (i / (n - 1)) * CW;
+      const yOfRhr = v => PAD.top + CH - ((v - rhrMin) / (rhrMax - rhrMin)) * CH;
+      const yOfBB  = v => PAD.top + CH - (v / 100) * CH;
+
+      // Grid lines
+      ctx.font = `9px 'DM Mono',monospace`; ctx.textAlign = 'right'; ctx.fillStyle = colGrid;
+      [rhrMin, Math.round((rhrMin + rhrMax) / 2), rhrMax].forEach(v => {
+        const y = yOfRhr(v);
+        ctx.strokeStyle = 'rgba(127,127,127,.15)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + CW, y); ctx.stroke();
+        ctx.fillText(v, PAD.left - 4, y + 3);
+      });
+
+      // BB area (low→high band)
+      const bbHiValid = bbHi.filter(v => v != null);
+      if (bbHiValid.length > 1) {
+        ctx.beginPath();
+        bbHi.forEach((v, i) => {
+          if (v == null) return;
+          i === 0 || bbHi.slice(0, i).every(x => x == null) ? ctx.moveTo(xOf(i), yOfBB(v)) : ctx.lineTo(xOf(i), yOfBB(v));
+        });
+        const lastIdx = bbHi.reduce((acc, v, i) => v != null ? i : acc, 0);
+        for (let i = lastIdx; i >= 0; i--) {
+          const lo = bbLo[i];
+          if (lo != null) ctx.lineTo(xOf(i), yOfBB(lo));
+        }
+        ctx.closePath();
+        ctx.fillStyle = colAccent + '22';
+        ctx.fill();
+
+        // BB high line
+        ctx.beginPath(); ctx.strokeStyle = colAccent; ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
+        let started = false;
+        bbHi.forEach((v, i) => {
+          if (v == null) { started = false; return; }
+          started ? ctx.lineTo(xOf(i), yOfBB(v)) : ctx.moveTo(xOf(i), yOfBB(v));
+          started = true;
+        });
+        ctx.stroke();
+      }
+
+      // RHR bars
+      const bw = Math.max(4, CW / n * 0.5);
+      rhr.forEach((v, i) => {
+        if (v == null) return;
+        const x = xOf(i), y = yOfRhr(v), barH = PAD.top + CH - y;
+        ctx.fillStyle = colOrng + '55';
+        ctx.fillRect(x - bw / 2, y, bw, barH);
+        ctx.fillStyle = colOrng;
+        ctx.fillRect(x - bw / 2, y, bw, 2);
+        // value label on top
+        ctx.font = `bold 9px 'DM Mono',monospace`; ctx.textAlign = 'center'; ctx.fillStyle = colOrng;
+        ctx.fillText(v, x, y - 2);
+      });
+    }
+
+    /* ══════════════════════════════════════════════
+       SLEEP + STRESS TREND CHART (7 days)
+    ══════════════════════════════════════════════ */
+    function drawSleepStress(dates, slpH, stress) {
+      const canvas = document.getElementById('sleepStressCanvas');
+      if (!canvas) return;
+      const dpr = window.devicePixelRatio || 1;
+      const W = canvas.parentElement.clientWidth, H = 130;
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+      const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
+
+      const cs = getComputedStyle(document.documentElement);
+      const colA2    = cs.getPropertyValue('--a2').trim()    || '#4a9eff';
+      const colOrng  = cs.getPropertyValue('--orng').trim()  || '#ff7b3d';
+      const colAccent= cs.getPropertyValue('--accent').trim()|| '#4affb4';
+      const colGrid  = cs.getPropertyValue('--text3').trim() || '#3d4560';
+      const colDanger= cs.getPropertyValue('--danger').trim()|| '#ff4d6d';
+
+      const n = dates.length;
+      if (n === 0) return;
+
+      const PAD = { top: 12, right: 12, bottom: 8, left: 28 };
+      const CW = W - PAD.left - PAD.right, CH = H - PAD.top - PAD.bottom;
+
+      // Sleep: 0–10h axis (left). Stress: 0–100 axis (shared scale, normalized).
+      const xOf = i => PAD.left + (i / (n - 1)) * CW;
+      const yOfSlp    = v => PAD.top + CH - Math.min(1, v / 10) * CH;
+      const yOfStress = v => PAD.top + CH - (v / 100) * CH;
+
+      // Grid + left labels (sleep hours)
+      ctx.font = `9px 'DM Mono',monospace`; ctx.textAlign = 'right'; ctx.fillStyle = colGrid;
+      [0, 5, 10].forEach(v => {
+        const y = yOfSlp(v);
+        ctx.strokeStyle = 'rgba(127,127,127,.15)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + CW, y); ctx.stroke();
+        if (v > 0) ctx.fillText(v + 'h', PAD.left - 3, y + 3);
+      });
+
+      // 7h target line
+      const y7 = yOfSlp(7);
+      ctx.strokeStyle = colAccent + '66'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(PAD.left, y7); ctx.lineTo(PAD.left + CW, y7); ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Sleep bars
+      const bw = Math.max(4, CW / n * 0.55);
+      slpH.forEach((v, i) => {
+        if (v == null) return;
+        const x = xOf(i), y = yOfSlp(v), barH = PAD.top + CH - y;
+        const under = v < 6.5;
+        ctx.fillStyle = (under ? colDanger : colA2) + '55';
+        ctx.fillRect(x - bw / 2, y, bw, barH);
+        ctx.fillStyle = under ? colDanger : colA2;
+        ctx.fillRect(x - bw / 2, y, bw, 2);
+        ctx.font = `bold 9px 'DM Mono',monospace`; ctx.textAlign = 'center';
+        ctx.fillStyle = under ? colDanger : colA2;
+        ctx.fillText(v.toFixed(1), x, y - 2);
+      });
+
+      // Stress line
+      const stressValid = stress.filter(v => v != null);
+      if (stressValid.length > 1) {
+        ctx.beginPath(); ctx.strokeStyle = colOrng + 'cc'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
+        let started = false;
+        stress.forEach((v, i) => {
+          if (v == null) { started = false; return; }
+          started ? ctx.lineTo(xOf(i), yOfStress(v)) : ctx.moveTo(xOf(i), yOfStress(v));
+          started = true;
+        });
+        ctx.stroke();
+        // Stress dots
+        stress.forEach((v, i) => {
+          if (v == null) return;
+          ctx.beginPath(); ctx.arc(xOf(i), yOfStress(v), 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = colOrng; ctx.fill();
+        });
+      }
     }
 
     /* ══════════════════════════════════════════════
