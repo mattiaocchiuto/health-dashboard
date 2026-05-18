@@ -262,10 +262,20 @@ async function fetchAllData(token, date, displayName) {
   startDate.setUTCDate(startDate.getUTCDate() - 90);
   const startStr = startDate.toISOString().slice(0, 10);
 
-  const [
-    statsResp, sleepResp, hrvResp, readinessResp,
-    trainingStatusResp, activitiesResp, pulseOxResp, respirationResp,
-  ] = await Promise.all([
+  // 6 prior days only — today is already fetched as core stats/sleep (indices 0,1)
+  const priorDates = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(date + 'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate() - (6 - i));
+    return d.toISOString().slice(0, 10);
+  });
+
+  const CORE_COUNT = 8;
+  const WELLNESS_OFFSET = CORE_COUNT;
+  const SLEEP_OFFSET = CORE_COUNT + priorDates.length;
+
+  // 8 core + 6 prior-wellness + 6 prior-sleep = 20 subrequests (CF limit: 50)
+  const allResps = await Promise.all([
+    // core 0–7
     garminGet(`/usersummary-service/usersummary/daily/${displayName}?calendarDate=${date}`, token),
     garminGet(`/wellness-service/wellness/dailySleep/${displayName}?date=${date}&nonSleepBufferMinutes=60`, token),
     garminGet(`/hrv-service/hrv/${date}`, token),
@@ -274,22 +284,36 @@ async function fetchAllData(token, date, displayName) {
     garminGet(`/activitylist-service/activities/search/activities?startDate=${startStr}&endDate=${date}&limit=100&start=0`, token),
     garminGet(`/wellness-service/wellness/pulseOx/${displayName}?date=${date}`, token),
     garminGet(`/wellness-service/wellness/dailyRespirationSummary/${displayName}/${date}`, token),
+    // prior-day wellness 8–13
+    ...priorDates.map(d => garminGet(`/usersummary-service/usersummary/daily/${displayName}?calendarDate=${d}`, token)),
+    // prior-day sleep 14–19
+    ...priorDates.map(d => garminGet(`/wellness-service/wellness/dailySleep/${displayName}?date=${d}&nonSleepBufferMinutes=60`, token)),
   ]);
 
-  const responses = [statsResp, sleepResp, hrvResp, readinessResp, trainingStatusResp, activitiesResp, pulseOxResp, respirationResp];
-  const labels = ['stats', 'sleep', 'hrv', 'readiness', 'trainingStatus', 'activities', 'pulseOx', 'respiration'];
-  const debug = labels.map((l, i) => `${l}:${responses[i].status}`).join(', ');
+  const coreLabels = ['stats', 'sleep', 'hrv', 'readiness', 'trainingStatus', 'activities', 'pulseOx', 'respiration'];
+  const debug = coreLabels.map((l, i) => `${l}:${allResps[i].status}`).join(', ');
 
   const errors = {};
-  const texts = await Promise.all(responses.map(async (r, i) => {
+  const allTexts = await Promise.all(allResps.map(async (r, i) => {
     const text = await r.text().catch(() => '');
-    if (!r.ok) errors[labels[i]] = text.slice(0, 300);
+    if (!r.ok && i < CORE_COUNT) errors[coreLabels[i]] = text.slice(0, 300);
     return text;
   }));
-  const parsed = texts.map(text => { try { return JSON.parse(text); } catch(e) { return null; } });
+  const allParsed = allTexts.map(text => { try { return JSON.parse(text); } catch (e) { return null; } });
 
-  const [stats, sleep, hrv, readiness, trainingStatus, activities, pulseOx, respiration] = parsed;
-  const result = { date, displayName, stats, sleep, hrv, readiness, trainingStatus, activities, pulseOx, respiration, _debug: debug };
+  const [stats, sleep, hrv, readiness, trainingStatus, activities, pulseOx, respiration] = allParsed;
+
+  // Reuse already-parsed today data; prepend the 6 prior days
+  const weeklyWellness = [
+    ...priorDates.map((d, i) => ({
+      date: d,
+      stats: allParsed[WELLNESS_OFFSET + i],
+      sleep: allParsed[SLEEP_OFFSET + i],
+    })),
+    { date, stats, sleep },
+  ];
+
+  const result = { date, displayName, stats, sleep, hrv, readiness, trainingStatus, activities, pulseOx, respiration, weeklyWellness, _debug: debug };
   if (Object.keys(errors).length) result._errors = errors;
   return result;
 }
